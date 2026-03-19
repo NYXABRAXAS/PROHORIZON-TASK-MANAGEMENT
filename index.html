@@ -7,7 +7,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800 text-[11px]">
-    <!-- Login -->
+
     <div id="loginPage" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[200]">
         <div class="bg-white p-10 rounded shadow-2xl w-96 border-t-8 border-red-600 text-center">
             <h1 class="text-2xl font-black italic uppercase">PROHORIZON <span class="text-red-600">OS</span></h1>
@@ -17,91 +17,63 @@
         </div>
     </div>
 
-    <!-- Dashboard -->
     <div id="dashboard" class="hidden max-w-[1600px] mx-auto p-4">
         <div class="bg-white p-6 rounded shadow-sm border-t-4 border-red-600 mb-4 flex justify-between items-center">
             <h1 class="text-2xl font-black italic uppercase text-slate-700">PROHORIZON <span class="text-red-600">TASK MANAGEMENT</span></h1>
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
                 <button onclick="loadTasks()" class="bg-slate-100 p-2 rounded border font-bold hover:bg-slate-200">🔄 Refresh</button>
-                <button onclick="exportTemplate()" class="bg-slate-700 text-white px-3 py-2 rounded font-black uppercase">1. TEMPLATE</button>
-                <label class="bg-blue-600 text-white px-3 py-2 rounded font-black uppercase cursor-pointer">2. IMPORT EXCEL<input type="file" class="hidden" accept=".xlsx,.xls" onchange="importExcel(this)"></label>
-                <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded font-black uppercase">+ MANUAL TASK</button>
-                <button onclick="exportExcel()" class="bg-red-600 text-white px-3 py-2 rounded font-black uppercase">EXPORT EXCEL</button>
+                <button onclick="exportTemplate()" class="bg-slate-700 text-white px-3 py-2 rounded font-black uppercase">Template</button>
+                <label class="bg-blue-600 text-white px-3 py-2 rounded font-black uppercase cursor-pointer">Import <input type="file" class="hidden" onchange="importExcel(this)"></label>
+                <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded font-black uppercase">+ Manual Task</button>
+                <button onclick="exportExcel()" class="bg-red-600 text-white px-3 py-2 rounded font-black uppercase">Export</button>
                 <button onclick="handleLogout()" class="text-gray-400 font-black ml-4">LOGOUT</button>
             </div>
         </div>
 
         <div class="grid grid-cols-5 gap-4 mb-6">
             <div onclick="filterByPriority('High')" class="bg-white p-5 rounded shadow border-b-4 border-red-600 text-center cursor-pointer hover:bg-red-50">
-                <p class="text-[9px] text-gray-400 uppercase font-black">HIGH PRIORITY</p>
+                <p class="text-[9px] text-gray-400 uppercase font-black">High Priority</p>
                 <p id="countHigh" class="text-3xl text-red-600 font-black">0</p>
             </div>
             <div onclick="filterByPriority('Normal')" class="bg-white p-5 rounded shadow border-b-4 border-yellow-500 text-center cursor-pointer hover:bg-yellow-50">
-                <p class="text-[9px] text-gray-400 uppercase font-black">NORMAL</p>
+                <p class="text-[9px] text-gray-400 uppercase font-black">Normal</p>
                 <p id="countNormal" class="text-3xl text-yellow-500 font-black">0</p>
             </div>
             <div onclick="filterByPriority('Low')" class="bg-white p-5 rounded shadow border-b-4 border-blue-400 text-center cursor-pointer hover:bg-blue-50">
-                <p class="text-[9px] text-gray-400 uppercase font-black">LOW</p>
+                <p class="text-[9px] text-gray-400 uppercase font-black">Low</p>
                 <p id="countLow" class="text-3xl text-blue-400 font-black">0</p>
             </div>
-            <div class="bg-white p-5 rounded shadow border-b-4 border-slate-700 col-span-2 flex items-center justify-around gap-3 flex-wrap">
+            <div class="bg-white p-5 rounded shadow border-b-4 border-slate-700 col-span-2 flex items-center justify-around">
                 <input type="date" id="dateStart" onchange="filterData()" class="border p-2 rounded">
                 <input type="date" id="dateEnd" onchange="filterData()" class="border p-2 rounded">
-                <select id="statusFilter" onchange="filterData()" class="border p-2 rounded font-bold">
-                    <option value="ALL">ALL STATUS</option>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Closed">Closed</option>
-                </select>
+                <select id="statusFilter" onchange="filterData()" class="border p-2 rounded font-bold"><option value="ALL">ALL STATUS</option><option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Closed">Closed</option></select>
             </div>
         </div>
 
-        <div class="bg-white rounded shadow-sm overflow-x-auto">
-            <table class="w-full text-left min-w-[1000px]" id="mainTable">
+        <div class="bg-white rounded shadow-sm overflow-hidden">
+            <table class="w-full text-left" id="mainTable">
                 <thead class="bg-slate-800 text-white text-[9px] uppercase">
-                    <tr>
-                        <th class="p-4">ID</th>
-                        <th>SUBJECT</th>
-                        <th>ASSIGNEE</th>
-                        <th>ADMIN</th>
-                        <th>PRIORITY</th>
-                        <th>STATUS</th>
-                        <th>POC</th>
-                        <th>DEADLINE</th>
-                        <th>REMARK</th>
-                        <th>ACTIONS</th>
-                    </tr>
+                    <tr><th class="p-4">ID</th><th>Subject</th><th>Assignee</th><th>Admin</th><th>Priority</th><th>Status</th><th>POC</th><th>Deadline</th><th>Remark</th><th>Actions</th></tr>
                 </thead>
                 <tbody id="taskBody" class="font-bold italic"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- Modal -->
     <div id="modal" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-[250]">
-        <div class="bg-white p-8 rounded-lg shadow-2xl w-[480px] border-t-8 border-red-600">
-            <form id="taskForm" class="space-y-5">
-                <input type="text" name="subject" placeholder="SUBJECT *" class="w-full border p-4 rounded font-bold uppercase outline-none focus:border-red-600" required>
-                <input type="text" name="assignee" placeholder="ASSIGNEE *" class="w-full border p-4 rounded font-bold uppercase outline-none focus:border-red-600" required>
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-[450px] border-t-8 border-red-600">
+            <form id="taskForm" class="space-y-4">
+                <input type="text" name="subject" placeholder="SUBJECT" class="w-full border p-4 rounded font-bold uppercase outline-none" required>
+                <input type="text" name="assignee" placeholder="ASSIGNEE" class="w-full border p-4 rounded font-bold uppercase outline-none" required>
                 <div class="grid grid-cols-2 gap-4">
-                    <select name="priority" class="border p-4 rounded font-bold focus:border-red-600">
-                        <option>High</option>
-                        <option selected>Normal</option>
-                        <option>Low</option>
-                    </select>
-                    <select name="status" class="border p-4 rounded font-bold focus:border-red-600">
-                        <option value="Pending">Pending</option>
-                        <option>In Progress</option>
-                        <option>Closed</option>
-                    </select>
+                    <select name="priority" class="border p-4 rounded font-bold"><option>High</option><option selected>Normal</option><option>Low</option></select>
+                    <select name="status" class="border p-4 rounded font-bold"><option value="Pending">Pending</option><option>In Progress</option><option>Closed</option></select>
                 </div>
-                <input type="date" name="deadline" class="w-full border p-4 rounded font-bold focus:border-red-600">
-                <textarea name="remark" placeholder="REMARKS" class="w-full border p-4 rounded font-bold h-24 outline-none focus:border-red-600"></textarea>
+                <input type="date" name="deadline" class="w-full border p-4 rounded font-bold">
+                <textarea name="remark" placeholder="REMARKS" class="w-full border p-4 rounded font-bold h-20 outline-none"></textarea>
                 <input type="file" name="poc_file" class="w-full border p-2 rounded text-[10px]">
-                <div class="flex gap-4">
-                    <button type="submit" class="flex-1 bg-red-600 text-white py-4 rounded font-black uppercase hover:bg-red-700">SAVE TASK</button>
-                    <button type="button" onclick="hideModal()" class="flex-1 bg-gray-300 text-gray-800 py-4 rounded font-black uppercase hover:bg-gray-400">CANCEL</button>
-                </div>
+                <button type="submit" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase">Save Task</button>
+                <button type="button" onclick="hideModal()" class="w-full text-gray-400 mt-2">Cancel</button>
             </form>
         </div>
     </div>
@@ -109,219 +81,98 @@
 <script>
     let allTasks = [];
     let currentFilterPriority = 'ALL';
-    let editingTaskId = null;
 
     async function handleLogin() {
-        const u = document.getElementById('username').value.trim();
-        const p = document.getElementById('password').value.trim();
-        if (!u || !p) return alert("Enter credentials");
-        
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p})
-        });
-        if (res.ok) {
-            document.getElementById('loginPage').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            loadTasks();
-        } else {
-            alert("Login failed");
-        }
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p}) });
+        if (res.ok) { document.getElementById('loginPage').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); loadTasks(); } else alert("Error");
     }
 
     async function loadTasks() {
-        try {
-            const res = await fetch('/api/tasks');
-            if (!res.ok) throw new Error("Failed to load tasks");
-            allTasks = await res.json();
-            filterData();
-        } catch(e) {
-            alert("Error loading tasks: " + e.message);
-        }
+        const res = await fetch('/api/tasks');
+        allTasks = await res.json();
+        filterData();
     }
 
     function renderTable(tasks) {
         document.getElementById('taskBody').innerHTML = tasks.map(t => `
             <tr class="border-b hover:bg-slate-50">
-                <td class="p-4 text-gray-500">#${t.id}</td>
-                <td class="p-4 uppercase">${t.subject || ''}</td>
-                <td class="p-4 text-blue-700 font-bold">${t.assignee || '-'}</td>
-                <td class="p-4 text-gray-600">${t.admin || '-'}</td>
-                <td class="p-4 font-bold ${t.priority === 'High' ? 'text-red-600' : t.priority === 'Normal' ? 'text-yellow-600' : 'text-blue-600'}">${t.priority || '-'}</td>
-                <td class="p-4 ${t.status === 'Closed' ? 'text-green-700 line-through' : t.status === 'In Progress' ? 'text-orange-600' : 'text-amber-600'}">${t.status}</td>
-                <td class="p-4">
-                    ${t.poc ? `<a href="/uploads/${t.poc}" target="_blank" class="text-blue-700 underline text-[10px] font-bold">View POC</a>` : '-'}
-                </td>
+                <td class="p-4 text-gray-400">#${t.id}</td>
+                <td class="p-4 uppercase">${t.subject}</td>
+                <td class="p-4 text-blue-600">${t.assignee}</td>
+                <td class="p-4 text-gray-400">${t.admin || '-'}</td>
+                <td class="p-4 ${t.priority === 'High' ? 'text-red-600' : 'text-yellow-600'}">${t.priority}</td>
+                <td class="p-4 text-green-600">${t.status}</td>
+                <td class="p-4">${t.poc ? `<a href="/uploads/${t.poc}" target="_blank" class="text-blue-600 underline text-[9px]">View</a>` : '-'}</td>
                 <td class="p-4">${t.deadline || '-'}</td>
-                <td class="p-4 text-[10px] text-gray-600 uppercase">${t.remark || '-'}</td>
-                <td class="p-4 flex gap-2 flex-wrap">
-                    <button onclick="editTask(${t.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-[9px] hover:bg-blue-700">EDIT</button>
-                    <button onclick="deleteTask(${t.id})" class="bg-red-600 text-white px-3 py-1 rounded text-[9px] hover:bg-red-700">DELETE</button>
-                    <button onclick="sendWA(${t.id})" class="text-green-700 font-black text-[10px] underline">WA</button>
+                <td class="p-4 text-[9px] text-gray-400 uppercase">${t.remark || '-'}</td>
+                <td class="p-4 flex gap-2">
+                    <button onclick="editTask(${t.id})" class="bg-blue-600 text-white px-2 py-1 rounded text-[8px]">EDIT</button>
+                    <button onclick="deleteTask(${t.id})" class="bg-red-600 text-white px-2 py-1 rounded text-[8px]">DEL</button>
+                    <button onclick="sendWA(${t.id})" class="text-green-600 font-bold">WA</button>
                 </td>
             </tr>
         `).join('');
-
-        document.getElementById('countHigh').innerText   = allTasks.filter(t => t.priority === 'High').length;
+        document.getElementById('countHigh').innerText = allTasks.filter(t => t.priority === 'High').length;
         document.getElementById('countNormal').innerText = allTasks.filter(t => t.priority === 'Normal').length;
-        document.getElementById('countLow').innerText    = allTasks.filter(t => t.priority === 'Low').length;
+        document.getElementById('countLow').innerText = allTasks.filter(t => t.priority === 'Low').length;
     }
 
-    function filterByPriority(p) {
-        currentFilterPriority = (currentFilterPriority === p) ? 'ALL' : p;
-        filterData();
-    }
+    function filterByPriority(p) { currentFilterPriority = (currentFilterPriority === p) ? 'ALL' : p; filterData(); }
 
     function filterData() {
         const start = document.getElementById('dateStart').value;
-        const end   = document.getElementById('dateEnd').value;
+        const end = document.getElementById('dateEnd').value;
         const status = document.getElementById('statusFilter').value;
-
         const filtered = allTasks.filter(t => {
-            const matchStatus   = status === 'ALL' || t.status === status;
+            const matchStatus = status === 'ALL' || t.status === status;
             const matchPriority = currentFilterPriority === 'ALL' || t.priority === currentFilterPriority;
             let matchDate = true;
-            if (start && end && t.created_at) {
-                const taskDate = t.created_at.split(' ')[0];
-                matchDate = (taskDate >= start && taskDate <= end);
-            }
+            if (start && end) matchDate = (t.created_at.split(' ')[0] >= start && t.created_at.split(' ')[0] <= end);
             return matchStatus && matchPriority && matchDate;
         });
-
         renderTable(filtered);
     }
 
-    async function deleteTask(id) {
-        if (!confirm("Delete this task permanently?")) return;
-        try {
-            const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                loadTasks();
-            } else {
-                alert("Delete failed");
-            }
-        } catch(e) {
-            alert("Error: " + e.message);
-        }
-    }
-
+    async function deleteTask(id) { if (confirm("Delete?")) { await fetch(`/api/tasks/${id}`, {method: 'DELETE'}); loadTasks(); } }
+    
     function editTask(id) {
         const t = allTasks.find(x => x.id === id);
-        if (!t) return;
-
-        editingTaskId = id;
-
         const form = document.getElementById('taskForm');
-        form.subject.value   = t.subject   || '';
-        form.assignee.value  = t.assignee  || '';
-        form.priority.value  = t.priority  || 'Normal';
-        form.status.value    = t.status    || 'Pending';
-        form.deadline.value  = t.deadline  || '';
-        form.remark.value    = t.remark    || '';
-
-        // File input cannot be pre-filled for security reasons
+        form.subject.value = t.subject;
+        form.assignee.value = t.assignee;
+        form.priority.value = t.priority;
+        form.status.value = t.status;
+        form.deadline.value = t.deadline;
+        form.remark.value = t.remark;
         showModal();
     }
 
     document.getElementById('taskForm').onsubmit = async (e) => {
         e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-
-        let url = '/api/tasks';
-        let method = 'POST';
-
-        if (editingTaskId !== null) {
-            url = `/api/tasks/${editingTaskId}`;
-            method = 'PUT';
-            // For PUT we send JSON (no file update support in edit for now)
-            const jsonData = {
-                subject:   form.subject.value,
-                assignee:  form.assignee.value,
-                priority:  form.priority.value,
-                status:    form.status.value,
-                deadline:  form.deadline.value,
-                remark:    form.remark.value
-            };
-            await fetch(url, {
-                method,
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(jsonData)
-            });
-        } else {
-            await fetch(url, { method, body: formData });
-        }
-
-        hideModal();
-        editingTaskId = null;
-        form.reset();
-        loadTasks();
+        await fetch('/api/tasks', { method: 'POST', body: new FormData(e.target) });
+        hideModal(); loadTasks(); e.target.reset();
     };
 
     async function importExcel(input) {
-        if (!input.files[0]) return;
         const reader = new FileReader();
         reader.onload = async (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet);
-                const res = await fetch('/api/tasks', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(json)
-                });
-                if (res.ok) {
-                    loadTasks();
-                } else {
-                    alert("Import failed");
-                }
-            } catch(err) {
-                alert("Invalid Excel file: " + err.message);
-            }
+            const json = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]]);
+            await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(json) });
+            loadTasks();
         };
         reader.readAsArrayBuffer(input.files[0]);
     }
 
-    function exportTemplate() {
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([
-            ["Subject", "Assignee", "Admin", "Priority", "Deadline"]
-        ]);
-        XLSX.utils.book_append_sheet(wb, ws, "Template");
-        XLSX.writeFile(wb, "Prohorizon_Task_Template.xlsx");
-    }
-
-    function exportExcel() {
-        const table = document.getElementById("mainTable");
-        const wb = XLSX.utils.table_to_book(table, {sheet:"Tasks"});
-        XLSX.writeFile(wb, "Prohorizon_Tasks_" + new Date().toISOString().slice(0,10) + ".xlsx");
-    }
-
-    function showModal() { 
-        document.getElementById('modal').classList.remove('hidden'); 
-    }
-    function hideModal() { 
-        document.getElementById('modal').classList.add('hidden'); 
-        editingTaskId = null;
-    }
-
-    async function handleLogout() {
-        await fetch('/api/logout');
-        location.reload();
-    }
-
+    function showModal() { document.getElementById('modal').classList.remove('hidden'); }
+    function hideModal() { document.getElementById('modal').classList.add('hidden'); }
+    function exportExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById("mainTable")), "Tasks.xlsx"); }
+    function handleLogout() { fetch('/api/logout').then(() => location.reload()); }
     function sendWA(id) {
         const t = allTasks.find(x => x.id === id);
-        if (!t) return;
-        const text = `*PH TASK RECAP*%0A*ID:* #${t.id}%0A*Subject:* ${encodeURIComponent(t.subject)}%0A*Assignee:* ${t.assignee}%0A*Status:* ${t.status}%0A*Deadline:* ${t.deadline || 'None'}%0A*Remark:* ${encodeURIComponent(t.remark || '-')}`;
-        window.open(`https://wa.me/91?text=${text}`, '_blank');
+        window.open(`https://wa.me/91?text=*PH TASK RECAP*%0A*Sub:* ${t.subject}%0A*Status:* ${t.status}`, '_blank');
     }
-
-    // Initial load after login
-    // loadTasks() is called after successful login
 </script>
 </body>
 </html>
