@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# Folder to store POC files
+# Config for file storage
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -28,7 +28,7 @@ class Task(db.Model):
     remark = db.Column(db.Text, default='')
     deadline = db.Column(db.String(50))
     poc_filename = db.Column(db.String(200)) 
-    # Captures exact India Time
+    # Exact India Time
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Kolkata')))
 
 with app.app_context():
@@ -42,7 +42,7 @@ def index():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# API to Fetch and Create Tasks (Supports Manual & Bulk Import)
+# API: Fetch and Create Tasks
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def manage_tasks():
     if request.method == 'POST':
@@ -77,11 +77,11 @@ def manage_tasks():
             "remark": t.remark,
             "deadline": t.deadline,
             "poc_filename": t.poc_filename,
-            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M") #
+            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
         })
     return jsonify(output)
 
-# API to Update Task via Modal
+# API: Update Task (Status/Remark/Priority)
 @app.route('/api/tasks/update', methods=['POST'])
 def update_task():
     data = request.json
@@ -91,12 +91,11 @@ def update_task():
     if 'status' in data: task.status = data['status']
     if 'remark' in data: task.remark = data['remark']
     if 'priority' in data: task.priority = data['priority']
-    if 'subject' in data: task.subject = data['subject']
     
     db.session.commit()
     return jsonify({"success": True})
 
-# API to Upload POC
+# API: Upload POC File
 @app.route('/api/tasks/upload/<int:task_id>', methods=['POST'])
 def upload_poc(task_id):
     if 'file' not in request.files: return jsonify({"error": "No file"}), 400
