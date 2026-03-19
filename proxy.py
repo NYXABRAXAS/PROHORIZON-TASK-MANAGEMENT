@@ -2,11 +2,17 @@ import os
 from flask import Flask, send_from_directory, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from openpyxl import load_workbook
-import io
+import pytz 
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# Database will be created in the same folder
+
+# Folder to store POC files
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///prohorizon_tasks.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -16,37 +22,45 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String(200), nullable=False)
     assignee = db.Column(db.String(100))
-    assigned_by = db.Column(db.String(100))
+    admin = db.Column(db.String(100))
     priority = db.Column(db.String(20)) 
-    status = db.Column(db.String(50), default='Pending') # Increased length for custom statuses
-    deadline = db.Column(db.String(20))
+    status = db.Column(db.String(50), default='Pending')
     remark = db.Column(db.Text, default='')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    deadline = db.Column(db.String(50))
+    poc_filename = db.Column(db.String(200)) 
+    # Captures exact India Time
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Kolkata')))
 
-# Initialize Database
 with app.app_context():
     db.create_all()
 
 @app.route('/')
 def index():
-    # Serves your updated index.html from the same directory
     return send_from_directory('.', 'index.html')
 
-# Fetch and Create Tasks
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# API to Fetch and Create Tasks (Supports Manual & Bulk Import)
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def manage_tasks():
     if request.method == 'POST':
         data = request.json
-        new_task = Task(
-            subject=data.get('subject'),
-            assignee=data.get('assignee'),
-            assigned_by=data.get('assigned_by'),
-            priority=data.get('priority'),
-            status=data.get('status', 'Pending'), # Now captures custom status on creation
-            remark=data.get('remark', ''),        # Now captures remark on creation
-            deadline=data.get('deadline')
-        )
-        db.session.add(new_task)
+        tasks_to_add = data if isinstance(data, list) else [data]
+        
+        for item in tasks_to_add:
+            new_task = Task(
+                subject=item.get('subject') or item.get('Subject'),
+                assignee=item.get('assignee') or item.get('Assignee'),
+                admin=item.get('admin') or item.get('Admin'),
+                priority=item.get('priority') or item.get('Priority') or 'Normal',
+                status=item.get('status') or item.get('Status') or 'Pending',
+                remark=item.get('remark') or item.get('Remark') or '',
+                deadline=item.get('deadline') or item.get('Deadline') or ''
+            )
+            db.session.add(new_task)
+        
         db.session.commit()
         return jsonify({"message": "Success"})
     
@@ -57,65 +71,44 @@ def manage_tasks():
             "id": t.id, 
             "subject": t.subject, 
             "assignee": t.assignee,
-            "assigned_by": t.assigned_by, 
+            "admin": t.admin, 
             "priority": t.priority,
             "status": t.status, 
+            "remark": t.remark,
             "deadline": t.deadline,
-            "remark": t.remark, 
-            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M") # Format for JS filtering
+            "poc_filename": t.poc_filename,
+            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M") #
         })
     return jsonify(output)
 
-# Bulk Import from Excel
-@app.route('/api/tasks/import', methods=['POST'])
-def import_tasks():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    file = request.files['file']
-    try:
-        wb = load_workbook(file)
-        sheet = wb.active
-        count = 0
-
-        # Skips header row
-        for row in sheet.iter_rows(min_row=2, values_only=True):
-            if not row[0]: continue # Skip empty rows
-            
-            new_task = Task(
-                subject=str(row[0]),
-                assignee=str(row[1]),
-                assigned_by=str(row[2]),
-                priority=str(row[3]),
-                status=str(row[4] if len(row) > 4 and row[4] else 'Pending'), # Support custom status in Excel
-                remark=str(row[5] if len(row) > 5 and row[5] else ''),         # Support remarks in Excel
-                deadline=str(row[6] if len(row) > 6 else '')
-            )
-            db.session.add(new_task)
-            count += 1
-
-        db.session.commit()
-        return jsonify({"message": f"Successfully imported {count} tasks"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Update Any Field (Subject, Priority, Status, Remark)
+# API to Update Task via Modal
 @app.route('/api/tasks/update', methods=['POST'])
 def update_task():
     data = request.json
     task = Task.query.get(data['id'])
     if not task: return jsonify({"error": "Not found"}), 404
     
-    # Dynamically update any field passed from the frontend
-    if 'subject' in data: task.subject = data['subject']
-    if 'remark' in data: task.remark = data['remark']
     if 'status' in data: task.status = data['status']
+    if 'remark' in data: task.remark = data['remark']
     if 'priority' in data: task.priority = data['priority']
+    if 'subject' in data: task.subject = data['subject']
     
     db.session.commit()
     return jsonify({"success": True})
 
+# API to Upload POC
+@app.route('/api/tasks/upload/<int:task_id>', methods=['POST'])
+def upload_poc(task_id):
+    if 'file' not in request.files: return jsonify({"error": "No file"}), 400
+    file = request.files['file']
+    task = Task.query.get(task_id)
+    if file and task:
+        filename = secure_filename(f"POC_{task_id}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        task.poc_filename = filename
+        db.session.commit()
+        return jsonify({"success": True})
+    return jsonify({"error": "Failed"}), 404
+
 if __name__ == '__main__':
-    # Using environment port for deployment, defaults to 8000 for local/office server
-    port = int(os.environ.get("PORT", 8000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=8000, debug=True)
