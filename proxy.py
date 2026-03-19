@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-import pandas as pd
+from openpyxl import load_workbook
 import io
 
 app = Flask(__name__)
@@ -64,26 +64,32 @@ def manage_tasks():
 def import_tasks():
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
-    
+
     file = request.files['file']
+
     try:
-        df = pd.read_excel(file)
-        # Required Columns: Subject, Assignee, Assigned_By, Priority, Deadline
-        for _, row in df.iterrows():
+        wb = load_workbook(file)
+        sheet = wb.active
+
+        count = 0
+
+        for row in sheet.iter_rows(min_row=2, values_only=True):
             new_task = Task(
-                subject=str(row['Subject']),
-                assignee=str(row['Assignee']),
-                assigned_by=str(row['Assigned_By']),
-                priority=str(row['Priority']),
-                deadline=str(row['Deadline']),
-                remark=str(row.get('Remark', ''))
+                subject=str(row[0]),
+                assignee=str(row[1]),
+                assigned_by=str(row[2]),
+                priority=str(row[3]),
+                deadline=str(row[4]),
+                remark=str(row[5] if len(row) > 5 else '')
             )
             db.session.add(new_task)
-        db.session.commit()
-        return jsonify({"message": f"Successfully imported {len(df)} tasks"})
-    except Exception as e:
-        return jsonify({"error": f"Import failed: {str(e)}"}), 500
+            count += 1
 
+        db.session.commit()
+        return jsonify({"message": f"Successfully imported {count} tasks"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # Update Remarks or Assignee
 @app.route('/api/tasks/update', methods=['POST'])
 def update_task():
