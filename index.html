@@ -27,10 +27,7 @@
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">OFFICE OPERATIONS & WORKFLOW</p>
             </div>
             <div class="flex items-center gap-2">
-                <div class="relative mr-4">
-                    <input type="text" id="taskSearch" onkeyup="filterData()" placeholder="Search ID or Subject..." class="border p-2 pr-10 rounded w-64 font-bold outline-none">
-                    <span class="absolute right-3 top-2 text-blue-500 font-bold">🔍</span>
-                </div>
+                <button onclick="loadTasks()" class="bg-slate-100 p-2 rounded border font-bold hover:bg-slate-200" title="Refresh">🔄 Refresh</button>
                 <button onclick="exportTemplate()" class="bg-slate-700 text-white px-3 py-2 rounded font-black uppercase">1. Template</button>
                 <label class="bg-blue-600 text-white px-3 py-2 rounded font-black uppercase cursor-pointer">2. Import Excel <input type="file" class="hidden" onchange="importExcel(this)"></label>
                 <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded font-black uppercase">+ Manual Task</button>
@@ -53,10 +50,10 @@
                 <p id="countLow" class="text-3xl text-blue-400 font-black">0</p>
             </div>
             <div class="bg-white p-5 rounded shadow border-b-4 border-slate-700 text-center">
-                <p class="text-[9px] text-gray-400 uppercase font-black mb-2">Calendar Range Filter</p>
+                <p class="text-[9px] text-gray-400 uppercase font-black mb-2">Calendar Filter</p>
                 <div class="flex gap-1 justify-center">
-                    <input type="date" id="dateStart" onchange="filterData()" class="border p-1 rounded text-[10px] font-bold">
-                    <input type="date" id="dateEnd" onchange="filterData()" class="border p-1 rounded text-[10px] font-bold">
+                    <input type="date" id="dateStart" onchange="filterData()" class="border p-1 rounded text-[10px]">
+                    <input type="date" id="dateEnd" onchange="filterData()" class="border p-1 rounded text-[10px]">
                 </div>
             </div>
             <div class="bg-white p-5 rounded shadow border-b-4 border-green-500 text-center">
@@ -73,7 +70,7 @@
             <table class="w-full text-left" id="mainTable">
                 <thead class="bg-slate-800 text-white text-[9px] uppercase tracking-wider">
                     <tr>
-                        <th class="p-4">ID</th><th>Subject</th><th>Assignee</th><th>Admin</th><th>Priority</th><th>Status</th><th>POC (Proof)</th><th>Deadline</th><th>Created At</th><th>Actions</th>
+                        <th class="p-4">ID</th><th>Subject</th><th>Assignee</th><th>Admin</th><th>Priority</th><th>Status</th><th>POC</th><th>Deadline</th><th>Remark</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="taskBody" class="font-bold italic"></tbody>
@@ -83,21 +80,23 @@
 
     <div id="modal" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-[150]">
         <div class="bg-white p-8 rounded-lg shadow-2xl w-[450px] border-t-8 border-red-600">
-            <h2 class="text-xl font-black text-red-600 uppercase mb-8">Assign Task</h2>
+            <h2 class="text-xl font-black text-red-600 uppercase mb-8 italic">Assign Task</h2>
             <form id="taskForm" class="space-y-4">
-                <input type="text" name="subject" placeholder="DMS API" class="w-full border p-4 rounded font-bold uppercase bg-blue-50 outline-none">
-                <input type="text" name="assignee" placeholder="SHIV" class="w-full border p-4 rounded font-bold uppercase bg-blue-50 outline-none">
+                <input type="text" name="subject" placeholder="DMS API" class="w-full border p-4 rounded font-bold uppercase bg-blue-50 outline-none" required>
+                <input type="text" name="assignee" placeholder="SHIV" class="w-full border p-4 rounded font-bold uppercase bg-blue-50 outline-none" required>
                 <input type="text" name="admin" placeholder="SIMARJEET" class="w-full border p-4 rounded font-bold uppercase outline-none">
                 <div class="grid grid-cols-2 gap-4">
                     <select name="priority" class="border p-4 rounded font-bold"><option>High</option><option selected>Normal</option><option>Low</option></select>
-                    <input type="date" name="deadline" class="border p-4 rounded font-bold">
+                    <select name="status" class="border p-4 rounded font-bold"><option selected>Pending</option><option>In Progress</option><option>Closed</option></select>
                 </div>
+                <input type="date" name="deadline" class="w-full border p-4 rounded font-bold">
+                <textarea name="remark" placeholder="ADD REMARKS/LOGS..." class="w-full border p-4 rounded font-bold h-20 uppercase outline-none"></textarea>
                 <div>
-                    <p class="text-[8px] font-black text-gray-400 uppercase mb-1 pl-1">Attach POC/Proof (Image/PDF)</p>
+                    <p class="text-[8px] font-black text-gray-400 uppercase mb-1">Attach POC (Image/PDF)</p>
                     <input type="file" name="poc_file" class="w-full border p-2 rounded text-[10px]">
                 </div>
                 <button type="submit" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase text-sm shadow-lg">Submit Assignment</button>
-                <button type="button" onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 uppercase text-[9px]">Cancel</button>
+                <button type="button" onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 uppercase text-[9px] text-center">Cancel</button>
             </form>
         </div>
     </div>
@@ -110,21 +109,13 @@
     async function handleLogin() {
         const u = document.getElementById('username').value;
         const p = document.getElementById('password').value;
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p})
-        });
-        if (res.ok) {
-            document.getElementById('loginPage').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            loadTasks();
-        } else { alert("Access Denied: Invalid Password"); }
+        const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p}) });
+        if (res.ok) { document.getElementById('loginPage').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); loadTasks(); }
+        else { alert("Invalid Password"); }
     }
 
     async function loadTasks() {
         const res = await fetch('/api/tasks');
-        if (res.status === 401) return;
         allTasks = await res.json();
         filterData();
     }
@@ -132,56 +123,63 @@
     function renderTable(tasks) {
         document.getElementById('taskBody').innerHTML = tasks.map(t => `
             <tr class="border-b hover:bg-slate-50 transition">
-                <td class="p-4 text-gray-400 font-normal">#${t.id}</td>
+                <td class="p-4 text-gray-400">#${t.id}</td>
                 <td class="p-4 uppercase">${t.subject}</td>
-                <td class="p-4"><span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-[9px]">${t.assignee}</span></td>
-                <td class="p-4 uppercase text-gray-400">${t.admin}</td>
-                <td class="p-4 uppercase ${t.priority === 'High' ? 'text-red-600' : 'text-yellow-600'}">${t.priority}</td>
-                <td class="p-4 uppercase text-green-600 font-black">${t.status}</td>
-                <td class="p-4">
-                    ${t.poc ? `<a href="/uploads/${t.poc}" target="_blank" class="text-blue-600 underline">View POC</a>` : `<input type="file" class="text-[9px]">`}
-                </td>
-                <td class="p-4 text-gray-500">${t.deadline || '-'}</td>
-                <td class="p-4 text-gray-300 font-normal">${t.created_at}</td>
+                <td class="p-4 text-blue-600 font-black">${t.assignee}</td>
+                <td class="p-4 text-gray-400">${t.admin}</td>
+                <td class="p-4 ${t.priority === 'High' ? 'text-red-600' : 'text-yellow-600'}">${t.priority}</td>
+                <td class="p-4 text-green-600">${t.status}</td>
+                <td class="p-4">${t.poc ? `<a href="/uploads/${t.poc}" target="_blank" class="text-blue-600 underline">View POC</a>` : '-'}</td>
+                <td class="p-4">${t.deadline || '-'}</td>
+                <td class="p-4 text-[9px] text-gray-400 uppercase">${t.remark || '-'}</td>
                 <td class="p-4 flex gap-2">
-                    <button onclick="sendWA(${t.id})" class="text-green-600 hover:scale-110">WA</button>
-                    <button class="bg-blue-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Edit</button>
+                    <button onclick="sendWA(${t.id})" class="text-green-600">WA</button>
                 </td>
             </tr>
         `).join('');
-        
         document.getElementById('countHigh').innerText = allTasks.filter(t => t.priority === 'High').length;
         document.getElementById('countNormal').innerText = allTasks.filter(t => t.priority === 'Normal').length;
         document.getElementById('countLow').innerText = allTasks.filter(t => t.priority === 'Low').length;
     }
 
-    function filterData() {
-        const query = document.getElementById('taskSearch').value.toLowerCase();
-        const start = document.getElementById('dateStart').value;
-        const end = document.getElementById('dateEnd').value;
+    function exportTemplate() {
+        const ws = XLSX.utils.json_to_sheet([{ Subject: "API Update", Assignee: "Shiv", Admin: "Simarjeet", Priority: "Normal", Deadline: "2026-03-30" }]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+        XLSX.writeFile(wb, "PH_Template.xlsx");
+    }
 
-        const filtered = allTasks.filter(t => {
-            const matchSearch = t.subject.toLowerCase().includes(query) || t.assignee.toLowerCase().includes(query);
-            const matchPriority = currentPriority === 'ALL' || t.priority === currentPriority;
-            const matchStatus = currentStatus === 'ALL' || t.status === currentStatus;
-            
-            let matchDate = true;
-            if (start && end) {
-                const taskDate = t.created_at.split(' ')[0];
-                matchDate = (taskDate >= start && taskDate <= end);
-            }
-            return matchSearch && matchPriority && matchStatus && matchDate;
-        });
-        renderTable(filtered);
+    async function importExcel(input) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const data = new Uint8Array(e.target.result);
+            const json = XLSX.utils.sheet_to_json(XLSX.read(data, {type: 'array'}).Sheets[XLSX.read(data, {type: 'array'}).SheetNames[0]]);
+            await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(json) });
+            loadTasks();
+        };
+        reader.readAsArrayBuffer(input.files[0]);
     }
 
     document.getElementById('taskForm').onsubmit = async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        await fetch('/api/tasks', { method: 'POST', body: formData });
-        hideModal();
-        loadTasks();
+        await fetch('/api/tasks', { method: 'POST', body: new FormData(e.target) });
+        hideModal(); loadTasks();
     };
+
+    function filterData() {
+        const query = document.getElementById('taskSearch').value.toLowerCase();
+        const start = document.getElementById('dateStart').value;
+        const end = document.getElementById('dateEnd').value;
+        const filtered = allTasks.filter(t => {
+            const matchSearch = t.subject.toLowerCase().includes(query) || t.assignee.toLowerCase().includes(query);
+            const matchPriority = currentPriority === 'ALL' || t.priority === currentPriority;
+            const matchStatus = currentStatus === 'ALL' || t.status === currentStatus;
+            let matchDate = true;
+            if (start && end) { matchDate = (t.created_at.split(' ')[0] >= start && t.created_at.split(' ')[0] <= end); }
+            return matchSearch && matchPriority && matchStatus && matchDate;
+        });
+        renderTable(filtered);
+    }
 
     function filterByPriority(p) { currentPriority = (currentPriority === p) ? 'ALL' : p; filterData(); }
     function filterByStatus(s) { currentStatus = s; filterData(); }
@@ -189,24 +187,6 @@
     function hideModal() { document.getElementById('modal').classList.add('hidden'); }
     function handleLogout() { fetch('/api/logout').then(() => location.reload()); }
     function exportExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById("mainTable")), "PH_Report.xlsx"); }
-    
-    function sendWA(id) {
-        const t = allTasks.find(x => x.id === id);
-        const msg = `*PH TASK RECAP*%0A*Sub:* ${t.subject}%0A*Status:* ${t.status}%0A*Deadline:* ${t.deadline}`;
-        window.open(`https://wa.me/91?text=${msg}`, '_blank');
-    }
-
-    async function importExcel(input) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const data = new Uint8Array(e.target.result);
-            const wb = XLSX.read(data, {type: 'array'});
-            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-            await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(json) });
-            loadTasks();
-        };
-        reader.readAsArrayBuffer(input.files[0]);
-    }
 </script>
 </body>
 </html>
