@@ -2,211 +2,214 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prohorizon Task Management</title>
+    <title>Prohorizon Elite Task Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --pro-red: #D32F2F; --pro-grey: #666666; }
-        th { background: var(--pro-grey); color: white; font-size: 10px; padding: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        .priority-High { border-left: 5px solid var(--pro-red); background-color: #fff5f5; }
-        .priority-Normal { border-left: 5px solid #EAB308; }
-        .priority-Low { border-left: 5px solid #3B82F6; }
-        input:focus { border-color: var(--pro-red) !important; outline: none; }
+        .filter-btn:hover { transform: translateY(-2px); transition: 0.2s; }
+        .active-filter { ring: 3px solid #D32F2F; }
     </style>
 </head>
-<body class="bg-gray-100 p-4 font-sans text-slate-800">
+<body class="bg-slate-50 p-4 font-sans text-slate-800">
 
-    <div class="max-w-7xl mx-auto">
-        <div class="bg-white p-6 rounded shadow-sm flex flex-wrap justify-between items-center border-t-4 border-[#D32F2F] mb-6">
-            <div class="mb-4 md:mb-0">
-                <h1 class="text-2xl font-black italic tracking-tighter">PROHORIZON <span class="text-[#D32F2F]">TASK MANAGEMENT</span></h1>
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Office Operations & Workflow</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-2">
-                <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Search Name/Task..." class="border p-2 rounded text-xs w-48 border-gray-200">
-                <button onclick="downloadTemplate()" class="bg-gray-500 text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter hover:bg-gray-600">1. Template</button>
-                <label class="bg-blue-600 text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter cursor-pointer hover:bg-blue-700">
-                    2. Import Excel
-                    <input type="file" id="importFile" class="hidden" accept=".xlsx, .xls" onchange="handleImport(this)">
-                </label>
-                <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter hover:bg-slate-800">+ Manual Task</button>
-                <button onclick="exportReport()" class="bg-[#D32F2F] text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter">Export Excel</button>
+    <div class="max-w-[1600px] mx-auto">
+        <div class="bg-white p-6 rounded shadow-sm border-t-4 border-[#D32F2F] mb-4">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-black italic text-slate-700">PROHORIZON <span class="text-red-600 uppercase">Task Management</span></h1>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Office Operations & Workflow</p>
+                </div>
+
+                <div class="flex gap-2 items-center">
+                    <input type="text" id="globalSearch" onkeyup="applyAllFilters()" placeholder="Search Name/Task..." class="border p-2 rounded text-xs w-48 outline-none focus:ring-1 ring-red-500">
+                    <button onclick="downloadTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">1. Template</button>
+                    <label class="bg-blue-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase cursor-pointer">
+                        2. Import Excel <input type="file" id="importExcel" class="hidden" onchange="handleImport(this)">
+                    </label>
+                    <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded text-[10px] font-bold uppercase">+ Manual Task</button>
+                    <button onclick="exportExcel()" class="bg-red-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">Export Excel</button>
+                    <button onclick="loadTasks()" class="p-2 bg-slate-100 rounded-full hover:bg-slate-200" title="Manual Sync">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
-            <div class="bg-white p-4 rounded shadow-sm border-b-4 border-red-500">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">High Priority</p>
-                <p id="countHigh" class="text-2xl font-black text-red-600">0</p>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+            <div class="md:col-span-4 grid grid-cols-3 gap-2">
+                <div onclick="setPriorityFilter('High')" class="bg-white p-4 rounded shadow-sm border-b-4 border-red-600 cursor-pointer filter-btn text-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase">High</p>
+                    <p id="countHigh" class="text-2xl font-black text-red-600">0</p>
+                </div>
+                <div onclick="setPriorityFilter('Normal')" class="bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500 cursor-pointer filter-btn text-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase">Normal</p>
+                    <p id="countNormal" class="text-2xl font-black text-yellow-500">0</p>
+                </div>
+                <div onclick="setPriorityFilter('Low')" class="bg-white p-4 rounded shadow-sm border-b-4 border-blue-400 cursor-pointer filter-btn text-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase">Low</p>
+                    <p id="countLow" class="text-2xl font-black text-blue-400">0</p>
+                </div>
             </div>
-            <div class="bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">Active / Normal</p>
-                <p id="countNormal" class="text-2xl font-black text-yellow-600">0</p>
+
+            <div class="md:col-span-4 bg-white p-4 rounded shadow-sm border-b-4 border-slate-700">
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Calendar Range Filter</p>
+                <div class="flex gap-2">
+                    <input type="date" id="dateFrom" onchange="applyAllFilters()" class="text-[10px] border p-2 rounded w-full">
+                    <span class="pt-2 text-gray-300">to</span>
+                    <input type="date" id="dateTo" onchange="applyAllFilters()" class="text-[10px] border p-2 rounded w-full">
+                </div>
             </div>
-            <div class="bg-white p-4 rounded shadow-sm border-b-4 border-blue-500">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">Total Workforce Tasks</p>
-                <p id="countTotal" class="text-2xl font-black text-blue-600">0</p>
+
+            <div class="md:col-span-4 bg-white p-4 rounded shadow-sm border-b-4 border-green-500">
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Filter by Status</p>
+                <div id="statusPills" class="flex flex-wrap gap-2">
+                    <button onclick="setStatusFilter('')" class="text-[9px] bg-slate-100 px-2 py-1 rounded font-bold uppercase">All Status</button>
+                    </div>
             </div>
         </div>
 
-        <div class="bg-white rounded shadow-lg overflow-hidden border border-gray-200">
-            <div class="overflow-x-auto max-h-[600px]">
-                <table class="w-full text-left border-collapse" id="taskTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Subject</th>
-                            <th>Assignee</th>
-                            <th>Assigned By</th>
-                            <th>Priority</th>
-                            <th>Age / Deadline</th>
-                            <th class="w-1/4">Remark</th>
-                        </tr>
-                    </thead>
-                    <tbody id="taskBody"></tbody>
-                </table>
-            </div>
+        <div class="bg-white rounded shadow-sm overflow-hidden">
+            <table class="w-full text-left" id="mainTable">
+                <thead class="bg-[#333] text-white text-[10px] uppercase">
+                    <tr>
+                        <th class="p-4 w-12 text-center">ID</th>
+                        <th>Subject</th>
+                        <th>Assignee</th>
+                        <th>Admin</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Remark</th>
+                        <th class="pr-4">Created At</th>
+                    </tr>
+                </thead>
+                <tbody id="taskBody" class="text-xs font-bold"></tbody>
+            </table>
         </div>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded shadow-2xl w-96 border-t-8 border-[#D32F2F]">
-            <h2 class="font-black text-[#D32F2F] mb-6 uppercase tracking-widest border-b pb-2">Assign Task</h2>
-            <div class="space-y-4">
-                <input type="text" id="subject" placeholder="Task Subject" class="w-full border p-2 rounded text-sm">
-                <input type="text" id="assignee" placeholder="Assignee Name" class="w-full border p-2 rounded text-sm">
-                <input type="text" id="assignedBy" placeholder="Your Name" class="w-full border p-2 rounded text-sm">
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg w-[500px] border-t-8 border-red-600">
+            <h2 class="text-xl font-black mb-6 uppercase text-red-600 italic">Assign New Task</h2>
+            <div class="space-y-3">
+                <input type="text" id="m_subject" placeholder="Task Subject" class="w-full border p-3 rounded">
+                <input type="text" id="m_assignee" placeholder="Assignee Name" class="w-full border p-3 rounded">
+                <input type="text" id="m_assignedBy" placeholder="Assigned By (Admin)" class="w-full border p-3 rounded">
                 <div class="flex gap-2">
-                    <select id="priority" class="w-1/2 border p-2 rounded text-sm">
-                        <option>Low</option>
-                        <option selected>Normal</option>
+                    <select id="m_priority" class="w-1/2 border p-3 rounded">
+                        <option>Normal</option>
                         <option>High</option>
+                        <option>Low</option>
                     </select>
-                    <input type="date" id="deadline" class="w-1/2 border p-2 rounded text-sm">
+                    <input type="text" id="m_status" placeholder="Status (Pending/Resolved)" class="w-1/2 border p-3 rounded">
                 </div>
-                <button onclick="saveTask()" class="w-full bg-[#D32F2F] text-white py-3 rounded font-black text-sm uppercase mt-4 shadow-lg">Submit Assignment</button>
-                <button onclick="hideModal()" class="w-full text-gray-400 text-[10px] font-bold uppercase mt-2">Cancel</button>
+                <textarea id="m_remark" placeholder="Initial Remark" class="w-full border p-3 rounded h-20"></textarea>
+                <button onclick="submitTask()" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase tracking-widest shadow-lg">Submit Assignment</button>
+                <button onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 uppercase text-[10px]">Close Window</button>
             </div>
         </div>
     </div>
 
 <script>
-    const API = '/api/tasks';
-
-    function downloadTemplate() {
-        const data = [{ Subject: "Sample Task", Assignee: "Employee Name", Assigned_By: "Manager Name", Priority: "High", Deadline: "2026-12-31", Remark: "" }];
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Tasks");
-        XLSX.writeFile(wb, "Prohorizon_Task_Template.xlsx");
-    }
-
-    async function handleImport(input) {
-        if (!input.files[0]) return;
-        const formData = new FormData();
-        formData.append('file', input.files[0]);
-        const res = await fetch(API + '/import', { method: 'POST', body: formData });
-        const result = await res.json();
-        alert(result.message || result.error);
-        loadTasks();
-        input.value = '';
-    }
+    let activePriority = '';
+    let activeStatus = '';
 
     async function loadTasks() {
-        try {
-            const res = await fetch(API);
-            const data = await res.json();
-            document.getElementById('countHigh').innerText = data.filter(t => t.priority === 'High').length;
-            document.getElementById('countNormal').innerText = data.filter(t => t.priority === 'Normal').length;
-            document.getElementById('countTotal').innerText = data.length;
+        const res = await fetch('/api/tasks');
+        const tasks = await res.json();
+        
+        // Update Counters
+        document.getElementById('countHigh').innerText = tasks.filter(t => t.priority === 'High').length;
+        document.getElementById('countNormal').innerText = tasks.filter(t => t.priority === 'Normal').length;
+        document.getElementById('countLow').innerText = tasks.filter(t => t.priority === 'Low').length;
 
-            const tbody = document.getElementById('taskBody');
-            tbody.innerHTML = data.map(t => `
-                <tr class="priority-${t.priority} border-b transition hover:bg-blue-50">
-                    <td class="p-4 font-black text-gray-300">#${t.id}</td>
-                    <td class="p-4 font-bold text-slate-700">${t.subject}</td>
-                    <td class="p-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-black text-[10px] uppercase">${t.assignee}</span></td>
-                    <td class="p-4 font-bold text-gray-400 text-[11px] uppercase">${t.assigned_by}</td>
-                    <td class="p-4"><span class="text-[10px] font-black uppercase ${t.priority === 'High' ? 'text-red-600' : 'text-gray-500'}">${t.priority}</span></td>
-                    <td class="p-4 text-[10px] font-bold text-slate-500 uppercase">${t.age} | Due: ${t.deadline}</td>
-                    <td class="p-4"><input type="text" value="${t.remark}" onblur="updateRemark(${t.id}, this.value)" class="border-b border-gray-200 bg-transparent p-1 text-xs w-full italic focus:border-[#D32F2F]" placeholder="Add Remark..."></td>
-                </tr>
-            `).join('');
-        } catch (e) { console.error("Load failed", e); }
+        // Build Status Pills dynamically based on user data
+        const uniqueStatuses = [...new Set(tasks.map(t => t.status))].filter(s => s);
+        const pillBox = document.getElementById('statusPills');
+        const currentPills = pillBox.innerHTML.split('</button>')[0] + '</button>'; 
+        pillBox.innerHTML = currentPills + uniqueStatuses.map(s => 
+            `<button onclick="setStatusFilter('${s}')" class="text-[9px] ${activeStatus === s ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700'} px-2 py-1 rounded font-bold uppercase border border-green-200">${s}</button>`
+        ).join('');
+
+        const tbody = document.getElementById('taskBody');
+        tbody.innerHTML = tasks.map(t => `
+            <tr class="border-b hover:bg-slate-50 transition" data-date="${t.created_at.split(' ')[0]}" data-priority="${t.priority}" data-status="${t.status}">
+                <td class="p-4 text-center text-gray-300">#${t.id}</td>
+                <td class="p-4 text-slate-700">${t.subject}</td>
+                <td class="p-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] uppercase">${t.assignee}</span></td>
+                <td class="p-4 text-gray-400 uppercase text-[9px]">${t.assigned_by}</td>
+                <td class="p-4">
+                    <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${t.priority === 'High' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}">${t.priority}</span>
+                </td>
+                <td class="p-4 font-black text-slate-600 uppercase text-[10px]">${t.status}</td>
+                <td class="p-4 italic text-gray-500 font-normal border-l border-slate-50">${t.remark || ''}</td>
+                <td class="p-4 text-[9px] text-gray-400">${t.created_at}</td>
+            </tr>
+        `).join('');
+        applyAllFilters();
     }
 
-    async function saveTask() {
-        // Get values
-        const subjectVal = document.getElementById('subject').value;
-        const assigneeVal = document.getElementById('assignee').value;
-        const assignedByVal = document.getElementById('assignedBy').value;
-        const priorityVal = document.getElementById('priority').value;
-        const deadlineVal = document.getElementById('deadline').value;
+    function applyAllFilters() {
+        const query = document.getElementById('globalSearch').value.toLowerCase();
+        const fromDate = document.getElementById('dateFrom').value;
+        const toDate = document.getElementById('dateTo').value;
+        const rows = document.querySelectorAll('#taskBody tr');
 
-        // Basic validation
-        if(!subjectVal || !assigneeVal) {
-            alert("Please fill Subject and Assignee!");
-            return;
-        }
+        rows.forEach(row => {
+            const rowText = row.innerText.toLowerCase();
+            const rowDate = row.getAttribute('data-date');
+            const rowPriority = row.getAttribute('data-priority');
+            const rowStatus = row.getAttribute('data-status');
+            
+            let show = true;
 
-        const payload = {
-            subject: subjectVal,
-            assignee: assigneeVal,
-            assigned_by: assignedByVal,
-            priority: priorityVal,
-            deadline: deadlineVal
-        };
+            // Priority Logic
+            if (activePriority && rowPriority !== activePriority) show = false;
+            // Status Logic
+            if (show && activeStatus && rowStatus !== activeStatus) show = false;
+            // Keyword Logic
+            if (show && query && !rowText.includes(query)) show = false;
+            // Range Logic
+            if (show && fromDate && rowDate < fromDate) show = false;
+            if (show && toDate && rowDate > toDate) show = false;
 
-        console.log("Sending Payload:", payload);
-
-        try {
-            const res = await fetch(API, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                console.log("Save successful");
-                hideModal();
-                // Clear inputs for next time
-                document.getElementById('subject').value = '';
-                document.getElementById('assignee').value = '';
-                // Refresh table
-                loadTasks();
-            } else {
-                alert("Server error while saving.");
-            }
-        } catch (err) {
-            console.error("Save failed", err);
-            alert("Could not connect to server.");
-        }
-    }
-
-    async function updateRemark(id, val) {
-        await fetch(API + '/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, remark: val}) });
-    }
-
-    function filterTable() {
-        const val = document.getElementById('filterInput').value.toLowerCase();
-        document.querySelectorAll("#taskBody tr").forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none";
+            row.style.display = show ? "" : "none";
         });
     }
 
-    function exportReport() {
-        const wb = XLSX.utils.table_to_book(document.getElementById('taskTable'));
-        XLSX.writeFile(wb, "Prohorizon_Task_Report.xlsx");
+    function setPriorityFilter(p) {
+        activePriority = (activePriority === p) ? '' : p;
+        applyAllFilters();
     }
 
+    function setStatusFilter(s) {
+        activeStatus = s;
+        applyAllFilters();
+    }
+
+    // Modal and Task Logic
+    async function submitTask() {
+        const data = {
+            subject: document.getElementById('m_subject').value,
+            assignee: document.getElementById('m_assignee').value,
+            assigned_by: document.getElementById('m_assignedBy').value,
+            priority: document.getElementById('m_priority').value,
+            status: document.getElementById('m_status').value || 'Pending',
+            remark: document.getElementById('m_remark').value
+        };
+        await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        hideModal();
+        loadTasks();
+    }
+
+    function exportExcel() { XLSX.utils.writeFile(XLSX.utils.table_to_book(document.getElementById('mainTable')), "Prohorizon_Report.xlsx"); }
+    function downloadTemplate() { 
+        const ws = XLSX.utils.aoa_to_sheet([["Subject", "Assignee", "Assigned By", "Priority", "Status", "Remark"]]);
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+        XLSX.utils.writeFile(wb, "Prohorizon_Template.xlsx");
+    }
     function showModal() { document.getElementById('modal').classList.remove('hidden'); }
     function hideModal() { document.getElementById('modal').classList.add('hidden'); }
-
-    // Start
     loadTasks();
-    setInterval(loadTasks, 30000);
 </script>
 </body>
 </html>
