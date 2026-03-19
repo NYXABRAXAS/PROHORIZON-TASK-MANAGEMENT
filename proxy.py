@@ -53,19 +53,19 @@ def manage_tasks():
 
     if request.method == 'POST':
         if request.is_json:
-            # Bulk import from Excel JSON
+            # Bulk from Excel
             data_list = request.json if isinstance(request.json, list) else [request.json]
             for item in data_list:
                 task = Task(
-                    subject=item.get('Subject') or item.get('subject'),
-                    assignee=item.get('Assignee') or item.get('assignee'),
-                    admin=item.get('Admin') or item.get('admin'),
-                    priority=item.get('Priority') or item.get('priority'),
+                    subject=item.get('Subject') or item.get('subject', ''),
+                    assignee=item.get('Assignee') or item.get('assignee', ''),
+                    admin=item.get('Admin') or item.get('admin', ''),
+                    priority=item.get('Priority') or item.get('priority', 'Normal'),
                     deadline=str(item.get('Deadline') or item.get('deadline') or ''),
                 )
                 db.session.add(task)
         else:
-            # Manual single task with file
+            # Manual form
             file = request.files.get('poc_file')
             filename = None
             if file and file.filename:
@@ -73,13 +73,13 @@ def manage_tasks():
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
             task = Task(
-                subject=request.form.get('subject'),
-                assignee=request.form.get('assignee'),
-                admin=request.form.get('admin'),
-                priority=request.form.get('priority'),
+                subject=request.form.get('subject', '').strip(),
+                assignee=request.form.get('assignee', '').strip(),
+                admin=request.form.get('admin', '').strip(),
+                priority=request.form.get('priority', 'Normal'),
                 status=request.form.get('status', 'Pending'),
-                remark=request.form.get('remark'),
-                deadline=request.form.get('deadline'),
+                remark=request.form.get('remark', ''),
+                deadline=request.form.get('deadline', ''),
                 poc_filename=filename
             )
             db.session.add(task)
@@ -87,7 +87,7 @@ def manage_tasks():
         db.session.commit()
         return jsonify({"success": True})
 
-    # GET - list tasks
+    # GET all tasks
     tasks = Task.query.order_by(Task.created_at.desc()).all()
     return jsonify([{
         "id": t.id,
@@ -121,21 +121,20 @@ def task_by_id(id):
 
     elif request.method == 'PUT':
         data = request.json
-        task.status = data.get('status', task.status)
-        task.remark = data.get('remark', task.remark)
-        task.subject = data.get('subject', task.subject)
-        task.assignee = data.get('assignee', task.assignee)
-        task.priority = data.get('priority', task.priority)
-        task.deadline = data.get('deadline', task.deadline)
-        # Note: admin & poc file not updated here for simplicity
+        task.subject   = data.get('subject',   task.subject)
+        task.assignee  = data.get('assignee',  task.assignee)
+        task.admin     = data.get('admin',     task.admin)
+        task.priority  = data.get('priority',  task.priority)
+        task.status    = data.get('status',    task.status)
+        task.remark    = data.get('remark',    task.remark)
+        task.deadline  = data.get('deadline',  task.deadline)
         db.session.commit()
         return jsonify({"success": True})
 
-    # GET single task (optional - not used now)
     return jsonify({
         "id": task.id, "subject": task.subject, "assignee": task.assignee,
-        "priority": task.priority, "status": task.status, "remark": task.remark,
-        "deadline": task.deadline, "poc": task.poc_filename
+        "admin": task.admin, "priority": task.priority, "status": task.status,
+        "remark": task.remark, "deadline": task.deadline, "poc": task.poc_filename
     })
 
 @app.route('/uploads/<filename>')
