@@ -2,10 +2,17 @@ import os
 from flask import Flask, send_from_directory, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import pytz 
 
 app = Flask(__name__)
-app.secret_key = "prohorizon_secure_key_2026" # Change this for production
+app.secret_key = "prohorizon_secure_key_2026"
+
+# Configuration for POC (Proof) File Uploads
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Database Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///prohorizon_tasks.db'
@@ -20,14 +27,9 @@ class Task(db.Model):
     admin = db.Column(db.String(100))
     priority = db.Column(db.String(20)) 
     status = db.Column(db.String(50), default='Pending')
-    remark = db.Column(db.Text, default='')
     deadline = db.Column(db.String(50))
+    poc_filename = db.Column(db.String(300)) # File path for POC
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Kolkata')))
-
-class History(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    action = db.Column(db.String(500))
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Kolkata')))
 
 with app.app_context():
     db.create_all()
@@ -42,76 +44,67 @@ def login():
     if data.get('username') == 'admin' and data.get('password') == 'pro123':
         session['logged_in'] = True
         return jsonify({"success": True})
-    return jsonify({"success": False, "message": "Invalid credentials"}), 401
+    return jsonify({"success": False}), 401
 
 @app.route('/api/logout')
 def logout():
     session.pop('logged_in', None)
     return jsonify({"success": True})
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
 
-# --- Task APIs ---
+# --- Main Task APIs ---
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def manage_tasks():
     if not is_logged_in(): return jsonify({"error": "Unauthorized"}), 401
     
     if request.method == 'POST':
-        data = request.json
-        tasks_to_add = data if isinstance(data, list) else [data]
-        for item in tasks_to_add:
+        if request.is_json: # For Excel Import
+            data_list = request.json if isinstance(request.json, list) else [request.json]
+            for item in data_list:
+                new_task = Task(
+                    subject=item.get('Subject'), assignee=item.get('Assignee'),
+                    admin=item.get('Admin') or 'SIMARJEET', priority=item.get('Priority'),
+                    status='Pending', deadline=str(item.get('Deadline') or '')
+                )
+                db.session.add(new_task)
+        else: # For Manual Entry with File
+            file = request.files.get('poc_file')
+            filename = None
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
             new_task = Task(
-                subject=item.get('subject') or item.get('Subject'),
-                assignee=item.get('assignee') or item.get('Assignee'),
-                admin='simarjeet',
-                priority=item.get('priority') or 'Normal',
-                status=item.get('status') or 'Pending',
-                remark=item.get('remark') or '',
-                deadline=item.get('deadline') or ''
+                subject=request.form.get('subject'), assignee=request.form.get('assignee'),
+                admin=request.form.get('admin') or 'SIMARJEET', priority=request.form.get('priority'),
+                status='Pending', deadline=request.form.get('deadline'), poc_filename=filename
             )
             db.session.add(new_task)
-            db.session.add(History(action=f"Created: {new_task.subject}"))
         db.session.commit()
         return jsonify({"success": True})
     
     tasks = Task.query.order_by(Task.created_at.desc()).all()
     return jsonify([{
-        "id": t.id, "subject": t.subject, "assignee": t.assignee, "priority": t.priority, 
-        "status": t.status, "remark": t.remark, "deadline": t.deadline, 
-        "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
+        "id": t.id, "subject": t.subject, "assignee": t.assignee, "admin": t.admin,
+        "priority": t.priority, "status": t.status, "deadline": t.deadline,
+        "poc": t.poc_filename, "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
     } for t in tasks])
 
 @app.route('/api/tasks/update/<int:id>', methods=['POST'])
 def update_task(id):
     if not is_logged_in(): return jsonify({"error": "Unauthorized"}), 401
     task = Task.query.get(id)
-    if not task: return jsonify({"error": "Not found"}), 404
     data = request.json
-    task.subject = data.get('subject', task.subject)
-    task.assignee = data.get('assignee', task.assignee)
-    task.priority = data.get('priority', task.priority)
     task.status = data.get('status', task.status)
-    task.remark = data.get('remark', task.remark)
-    task.deadline = data.get('deadline', task.deadline)
-    db.session.add(History(action=f"Updated Task #{id}"))
     db.session.commit()
     return jsonify({"success": True})
-
-@app.route('/api/tasks/delete', methods=['POST'])
-def delete_tasks():
-    if not is_logged_in(): return jsonify({"error": "Unauthorized"}), 401
-    ids = request.json.get('ids', [])
-    Task.query.filter(Task.id.in_(ids)).delete(synchronize_session=False)
-    db.session.commit()
-    return jsonify({"success": True})
-
-@app.route('/api/history', methods=['GET'])
-def get_history():
-    if not is_logged_in(): return jsonify({"error": "Unauthorized"}), 401
-    logs = History.query.order_by(History.timestamp.desc()).limit(50).all()
-    return jsonify([{"action": l.action, "time": l.timestamp.strftime("%Y-%m-%d %H:%M")} for l in logs])
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
