@@ -27,16 +27,13 @@ class Task(db.Model):
     admin = db.Column(db.String(100))
     priority = db.Column(db.String(20)) 
     status = db.Column(db.String(50), default='Pending')
-    remark = db.Column(db.Text) # NEW FIELD
+    remark = db.Column(db.Text)
     deadline = db.Column(db.String(50))
     poc_filename = db.Column(db.String(300))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Kolkata')))
 
 with app.app_context():
     db.create_all()
-
-def is_logged_in():
-    return session.get('logged_in', False)
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -61,29 +58,45 @@ def index():
 
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def manage_tasks():
-    if not is_logged_in(): return jsonify({"error": "Unauthorized"}), 401
+    if not session.get('logged_in'): 
+        return jsonify({"error": "Unauthorized"}), 401
     
     if request.method == 'POST':
-        if request.is_json: # Excel Import
+        # CASE 1: EXCEL IMPORT (JSON)
+        if request.is_json:
             data_list = request.json if isinstance(request.json, list) else [request.json]
             for item in data_list:
-                db.session.add(Task(
-                    subject=item.get('Subject'), assignee=item.get('Assignee'),
-                    admin=item.get('Admin') or 'SIMARJEET', priority=item.get('Priority'),
-                    status='Pending', deadline=str(item.get('Deadline') or '')
-                ))
-        else: # Manual Entry
+                # Matches your Excel Template Headers exactly
+                new_task = Task(
+                    subject=item.get('Subject'), 
+                    assignee=item.get('Assignee'),
+                    admin=item.get('Admin') or 'SIMARJEET', 
+                    priority=item.get('Priority') or 'Normal',
+                    status='Pending', 
+                    deadline=str(item.get('Deadline') or '')
+                )
+                db.session.add(new_task)
+        
+        # CASE 2: MANUAL ENTRY (FormData)
+        else:
             file = request.files.get('poc_file')
-            filename = secure_filename(file.filename) if file and file.filename != '' else None
-            if filename: file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            filename = None
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             
-            db.session.add(Task(
-                subject=request.form.get('subject'), assignee=request.form.get('assignee'),
-                admin=request.form.get('admin') or 'SIMARJEET', priority=request.form.get('priority'),
-                status=request.form.get('status') or 'Pending', # STATUS FROM MODAL
-                remark=request.form.get('remark'), # REMARK FROM MODAL
-                deadline=request.form.get('deadline'), poc_filename=filename
-            ))
+            new_task = Task(
+                subject=request.form.get('subject'), 
+                assignee=request.form.get('assignee'),
+                admin=request.form.get('admin') or 'SIMARJEET', 
+                priority=request.form.get('priority'),
+                status=request.form.get('status') or 'Pending',
+                remark=request.form.get('remark'),
+                deadline=request.form.get('deadline'), 
+                poc_filename=filename
+            )
+            db.session.add(new_task)
+            
         db.session.commit()
         return jsonify({"success": True})
     
@@ -91,7 +104,8 @@ def manage_tasks():
     return jsonify([{
         "id": t.id, "subject": t.subject, "assignee": t.assignee, "admin": t.admin,
         "priority": t.priority, "status": t.status, "remark": t.remark,
-        "deadline": t.deadline, "poc": t.poc_filename, "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
+        "deadline": t.deadline, "poc": t.poc_filename, 
+        "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
     } for t in tasks])
 
 if __name__ == '__main__':
