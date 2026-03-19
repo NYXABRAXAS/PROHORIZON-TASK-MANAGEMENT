@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import pandas as pd
@@ -28,7 +28,7 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory('.', 'index.html')
 
 # Fetch and Create Tasks
 @app.route('/api/tasks', methods=['GET', 'POST'])
@@ -96,4 +96,5 @@ def update_task():
     return jsonify({"success": True})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
