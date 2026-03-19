@@ -2,71 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Prohorizon Task Management Elite</title>
+    <title>Prohorizon Task Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <style>
-        .filter-btn:hover { transform: translateY(-2px); transition: 0.2s; }
-        .status-Closed { opacity: 0.5; background: #f0fdf4; }
-    </style>
 </head>
 <body class="bg-slate-50 p-4 font-sans text-slate-800">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white p-6 rounded shadow-sm border-t-4 border-red-600 mb-4">
-            <div class="flex flex-wrap justify-between items-center gap-4">
-                <div>
-                    <h1 class="text-2xl font-black italic text-slate-700">PROHORIZON <span class="text-red-600 uppercase">Task Management</span></h1>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Office Operations & Workflow</p>
-                </div>
-
-                <div class="flex gap-2 items-center">
-                    <input type="text" id="globalSearch" onkeyup="applyAllFilters()" placeholder="Search..." class="border p-2 rounded text-xs w-48 outline-none focus:ring-1 ring-red-500">
-                    <button onclick="downloadTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">1. Template</button>
-                    <label class="bg-blue-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase cursor-pointer">
-                        2. Import Excel <input type="file" id="importExcel" class="hidden" onchange="handleImport(this)">
-                    </label>
-                    <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded text-[10px] font-bold uppercase">+ Manual Task</button>
-                    <button onclick="exportExcel()" class="bg-red-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">Export Excel</button>
-                    <button onclick="loadTasks()" class="p-2 bg-slate-100 rounded-full hover:bg-slate-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    </button>
-                </div>
+        <div class="bg-white p-6 rounded shadow-sm border-t-4 border-red-600 mb-4 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black italic text-slate-700 uppercase">Prohorizon <span class="text-red-600">Task Management</span></h1>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Office Operations & Workflow</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="downloadTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">1. Template</button>
+                <label class="bg-blue-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase cursor-pointer">
+                    2. Import Excel <input type="file" id="importExcel" class="hidden" onchange="handleImport(this)">
+                </label>
+                <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded text-[10px] font-bold uppercase">+ Manual Task</button>
+                <button onclick="exportExcel()" class="bg-red-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">Export Excel</button>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 text-center">
-            <div onclick="setPriorityFilter('High')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-red-600 cursor-pointer filter-btn">
-                <p class="text-[10px] font-black text-gray-400 uppercase">High</p>
+            <div onclick="setPriorityFilter('High')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-red-600 cursor-pointer">
+                <p class="text-[10px] font-black text-gray-400 uppercase">High Priority</p>
                 <p id="countHigh" class="text-2xl font-black text-red-600">0</p>
             </div>
-            <div onclick="setPriorityFilter('Normal')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500 cursor-pointer filter-btn">
+            <div onclick="setPriorityFilter('Normal')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500 cursor-pointer">
                 <p class="text-[10px] font-black text-gray-400 uppercase">Normal</p>
                 <p id="countNormal" class="text-2xl font-black text-yellow-500">0</p>
             </div>
-            <div class="md:col-span-4 bg-white p-4 rounded shadow-sm border-b-4 border-slate-700">
-                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Calendar Range</p>
-                <div class="flex gap-2"><input type="date" id="dateFrom" onchange="applyAllFilters()" class="text-[10px] border p-1 rounded w-full"><input type="date" id="dateTo" onchange="applyAllFilters()" class="text-[10px] border p-1 rounded w-full"></div>
+            <div onclick="setPriorityFilter('Low')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-blue-500 cursor-pointer">
+                <p class="text-[10px] font-black text-gray-400 uppercase">Low</p>
+                <p id="countLow" class="text-2xl font-black text-blue-500">0</p>
             </div>
-            <div class="md:col-span-4 bg-white p-4 rounded shadow-sm border-b-4 border-green-500">
-                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Status Filter</p>
-                <div id="statusPills" class="flex flex-wrap gap-2 justify-center">
-                    <button onclick="setStatusFilter('')" class="text-[9px] bg-slate-100 px-2 py-1 rounded font-bold uppercase">All</button>
+            <div class="md:col-span-3 bg-white p-4 rounded shadow-sm border-b-4 border-slate-700">
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Calendar Range Filter</p>
+                <div class="flex gap-2">
+                    <input type="date" id="dateFrom" onchange="applyAllFilters()" class="border p-1 rounded w-full text-xs">
+                    <input type="date" id="dateTo" onchange="applyAllFilters()" class="border p-1 rounded w-full text-xs">
                 </div>
+            </div>
+            <div class="md:col-span-3 bg-white p-4 rounded shadow-sm border-b-4 border-green-500">
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Status Filter</p>
+                <div id="statusPills" class="flex flex-wrap gap-2 justify-center"></div>
             </div>
         </div>
 
-        <div class="bg-white rounded shadow-sm overflow-hidden">
+        <div class="bg-white rounded shadow-sm overflow-hidden overflow-x-auto">
             <table class="w-full text-left" id="mainTable">
                 <thead class="bg-slate-800 text-white text-[10px] uppercase">
                     <tr>
                         <th class="p-4">ID</th>
-                        <th>Subject (Click to Edit)</th>
+                        <th>Subject</th>
                         <th>Assignee</th>
+                        <th>Admin</th>
                         <th>Priority</th>
                         <th>Status</th>
-                        <th>Proof (POC)</th>
-                        <th>Remark</th>
+                        <th>POC (Proof)</th>
+                        <th>Deadline</th>
+                        <th>Created At</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -76,19 +72,43 @@
     </div>
 
     <div id="modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg w-[450px] border-t-8 border-red-600">
-            <h2 class="text-xl font-black mb-6 uppercase text-red-600">New Assignment</h2>
+        <div class="bg-white p-8 rounded-lg w-[450px] border-t-8 border-red-600 shadow-2xl">
+            <h2 class="text-xl font-black mb-6 uppercase text-red-600">Assign Task</h2>
             <div class="space-y-3">
-                <input type="text" id="m_subject" placeholder="Subject" class="w-full border p-3 rounded text-sm">
-                <input type="text" id="m_assignee" placeholder="Assignee Name" class="w-full border p-3 rounded text-sm">
-                <input type="text" id="m_assignedBy" placeholder="Admin Name" class="w-full border p-3 rounded text-sm">
-                <div class="flex gap-2">
-                    <select id="m_priority" class="w-1/2 border p-3 rounded text-sm"><option>Normal</option><option>High</option><option>Low</option></select>
-                    <input type="text" id="m_status" placeholder="Status" class="w-1/2 border p-3 rounded text-sm">
+                <input type="text" id="m_subject" placeholder="Task Subject" class="w-full border p-3 rounded text-sm font-bold">
+                <input type="text" id="m_assignee" placeholder="Assignee Name" class="w-full border p-3 rounded text-sm font-bold">
+                <input type="text" id="m_admin" placeholder="Admin (Assigned By)" class="w-full border p-3 rounded text-sm font-bold">
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="m_priority" class="border p-3 rounded text-sm font-bold">
+                        <option>High</option>
+                        <option selected>Normal</option>
+                        <option>Low</option>
+                    </select>
+                    <input type="text" id="m_status" value="Pending" placeholder="Status" class="border p-3 rounded text-sm font-bold uppercase">
                 </div>
-                <textarea id="m_remark" placeholder="Initial Remark" class="w-full border p-3 rounded h-20 text-sm"></textarea>
-                <button onclick="submitTask()" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase">Save Task</button>
-                <button onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 text-[10px]">CANCEL</button>
+                <input type="date" id="m_deadline" class="w-full border p-3 rounded text-sm font-bold">
+                <textarea id="m_remark" placeholder="Initial Remark/Notes..." class="w-full border p-3 rounded text-sm h-20"></textarea>
+                <button onclick="submitTask()" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase tracking-wider">Submit Assignment</button>
+                <button onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 text-[10px] uppercase">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg w-[400px] border-t-4 border-blue-600 shadow-2xl">
+            <h2 class="font-black uppercase mb-4 text-blue-600">Update Task</h2>
+            <input type="hidden" id="edit_id">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400">STATUS</label>
+                    <input type="text" id="edit_status" class="w-full border p-2 rounded text-sm uppercase font-bold outline-blue-500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400">REMARK</label>
+                    <textarea id="edit_remark" class="w-full border p-2 rounded text-sm h-24 outline-blue-500"></textarea>
+                </div>
+                <button onclick="saveEdit()" class="w-full bg-blue-600 text-white py-3 rounded font-black uppercase">Save Changes</button>
+                <button onclick="closeEditModal()" class="w-full text-gray-400 text-[10px] font-bold mt-2">CLOSE</button>
             </div>
         </div>
     </div>
@@ -102,41 +122,67 @@
         
         document.getElementById('countHigh').innerText = tasks.filter(t => t.priority === 'High').length;
         document.getElementById('countNormal').innerText = tasks.filter(t => t.priority === 'Normal').length;
-
+        document.getElementById('countLow').innerText = tasks.filter(t => t.priority === 'Low').length;
+        
         const uniqueStatuses = [...new Set(tasks.map(t => t.status))].filter(s => s);
         document.getElementById('statusPills').innerHTML = `<button onclick="setStatusFilter('')" class="text-[9px] bg-slate-100 px-2 py-1 rounded font-bold uppercase">All</button>` + 
             uniqueStatuses.map(s => `<button onclick="setStatusFilter('${s}')" class="text-[9px] bg-green-50 text-green-700 px-2 py-1 rounded font-bold uppercase border border-green-200">${s}</button>`).join('');
 
         document.getElementById('taskBody').innerHTML = tasks.map(t => `
-            <tr class="border-b hover:bg-slate-50 transition status-${t.status}" data-date="${t.created_at.split(' ')[0]}" data-priority="${t.priority}" data-status="${t.status}">
+            <tr class="border-b hover:bg-slate-50 transition" data-date="${t.created_at.split(' ')[0]}" data-priority="${t.priority}" data-status="${t.status}">
                 <td class="p-4 text-gray-300">#${t.id}</td>
-                <td class="p-4"><input type="text" value="${t.subject}" onblur="updateTask(${t.id}, 'subject', this.value)" class="bg-transparent border-b border-transparent focus:border-red-500 outline-none w-full"></td>
+                <td class="p-4 uppercase">${t.subject}</td>
                 <td class="p-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] uppercase">${t.assignee}</span></td>
+                <td class="p-4 text-gray-500 uppercase">${t.admin || '-'}</td>
+                <td class="p-4 uppercase text-[10px] ${t.priority === 'High' ? 'text-red-600' : 'text-slate-500'}">${t.priority}</td>
+                <td class="p-4 uppercase text-green-700">${t.status}</td>
                 <td class="p-4">
-                    <select onchange="updateTask(${t.id}, 'priority', this.value)" class="bg-transparent font-black ${t.priority === 'High' ? 'text-red-600' : 'text-slate-500'}">
-                        <option ${t.priority === 'Normal' ? 'selected' : ''}>Normal</option>
-                        <option ${t.priority === 'High' ? 'selected' : ''}>High</option>
-                        <option ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
-                    </select>
+                    ${t.poc_filename ? `<a href="/uploads/${t.poc_filename}" target="_blank" class="text-blue-600 underline">View POC</a>` : 
+                    `<input type="file" onchange="uploadPOC(${t.id}, this)" class="text-[9px] w-28">`}
                 </td>
+                <td class="p-4 text-gray-500 font-normal">${t.deadline || '-'}</td>
+                <td class="p-4 text-gray-400 font-normal italic">${t.created_at}</td>
                 <td class="p-4">
-                    <input type="text" value="${t.status}" onblur="updateTask(${t.id}, 'status', this.value)" class="bg-transparent font-black uppercase text-[10px] border-b border-dashed w-24">
-                </td>
-                <td class="p-4">
-                    ${t.file_proof ? `<a href="/uploads/${t.file_proof}" target="_blank" class="text-green-600 underline">View POC</a>` : `<input type="file" onchange="uploadPOC(${t.id}, this)" class="text-[9px] w-28">`}
-                </td>
-                <td class="p-4"><input type="text" value="${t.remark || ''}" onblur="updateTask(${t.id}, 'remark', this.value)" class="bg-transparent font-normal italic w-full" placeholder="..."></td>
-                <td class="p-4">
-                    <button onclick="updateTask(${t.id}, 'status', 'Closed')" class="bg-green-600 text-white px-2 py-1 rounded text-[9px] uppercase font-black">Close Task</button>
+                    <button onclick='openEditModal(${JSON.stringify(t)})' class="bg-blue-600 text-white px-2 py-1 rounded text-[9px] uppercase font-black">Edit</button>
                 </td>
             </tr>
         `).join('');
         applyAllFilters();
     }
 
-    async function updateTask(id, field, value) {
-        await fetch('/api/tasks/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, [field]: value}) });
-        if(field === 'status') loadTasks();
+    async function handleImport(input) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(jsonData) });
+            loadTasks();
+        };
+        reader.readAsArrayBuffer(input.files[0]);
+    }
+
+    function downloadTemplate() {
+        const data = [
+            ["Subject", "Assignee", "Admin", "Priority", "Status", "Remark", "Deadline"],
+            ["Update Tractor LTV", "Shiv", "Simarjeet", "High", "Pending", "Check credit compliance logic", "2026-03-30"]
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+        XLSX.writeFile(wb, "Prohorizon_Import_Template.xlsx");
+    }
+
+    function applyAllFilters() {
+        const f = document.getElementById('dateFrom').value;
+        const t = document.getElementById('dateTo').value;
+        document.querySelectorAll('#taskBody tr').forEach(row => {
+            const date = row.getAttribute('data-date');
+            const show = (!activePriority || row.getAttribute('data-priority') === activePriority) &&
+                         (!activeStatus || row.getAttribute('data-status') === activeStatus) &&
+                         (!f || date >= f) && (!t || date <= t);
+            row.style.display = show ? "" : "none";
+        });
     }
 
     async function uploadPOC(id, input) {
@@ -145,40 +191,39 @@
         loadTasks();
     }
 
-    function exportExcel() {
-        const table = document.getElementById("mainTable");
-        const wb = XLSX.utils.table_to_book(table);
-        XLSX.writeFile(wb, "Prohorizon_Tasks_Export.xlsx");
+    function openEditModal(t) {
+        document.getElementById('edit_id').value = t.id;
+        document.getElementById('edit_status').value = t.status;
+        document.getElementById('edit_remark').value = t.remark;
+        document.getElementById('editModal').classList.remove('hidden');
     }
 
-    function downloadTemplate() {
-        const data = [["Subject", "Assignee", "Admin", "Priority", "Status", "Remark", "Deadline"]];
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Template");
-        XLSX.writeFile(wb, "Prohorizon_Template.xlsx");
-    }
+    function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
 
-    function applyAllFilters() {
-        const q = document.getElementById('globalSearch').value.toLowerCase();
-        const f = document.getElementById('dateFrom').value;
-        const t = document.getElementById('dateTo').value;
-        document.querySelectorAll('#taskBody tr').forEach(row => {
-            const rowDate = row.getAttribute('data-date');
-            const show = (!activePriority || row.getAttribute('data-priority') === activePriority) &&
-                         (!activeStatus || row.getAttribute('data-status') === activeStatus) &&
-                         (!q || row.innerText.toLowerCase().includes(q)) &&
-                         (!f || rowDate >= f) && (!t || rowDate <= t);
-            row.style.display = show ? "" : "none";
-        });
+    async function saveEdit() {
+        const id = document.getElementById('edit_id').value;
+        const status = document.getElementById('edit_status').value;
+        const remark = document.getElementById('edit_remark').value;
+        await fetch('/api/tasks/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, status, remark }) });
+        closeEditModal(); loadTasks();
     }
 
     function setPriorityFilter(p) { activePriority = (activePriority === p) ? '' : p; applyAllFilters(); }
     function setStatusFilter(s) { activeStatus = s; applyAllFilters(); }
     function showModal() { document.getElementById('modal').classList.remove('hidden'); }
     function hideModal() { document.getElementById('modal').classList.add('hidden'); }
+    function exportExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('mainTable')), "Prohorizon_Tasks_Export.xlsx"); }
+    
     async function submitTask() {
-        const data = { subject: document.getElementById('m_subject').value, assignee: document.getElementById('m_assignee').value, assigned_by: document.getElementById('m_assignedBy').value, priority: document.getElementById('m_priority').value, status: document.getElementById('m_status').value || 'Pending', remark: document.getElementById('m_remark').value };
+        const data = { 
+            subject: document.getElementById('m_subject').value, 
+            assignee: document.getElementById('m_assignee').value, 
+            admin: document.getElementById('m_admin').value, 
+            priority: document.getElementById('m_priority').value,
+            status: document.getElementById('m_status').value,
+            deadline: document.getElementById('m_deadline').value,
+            remark: document.getElementById('m_remark').value
+        };
         await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
         hideModal(); loadTasks();
     }
