@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prohorizon Task Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --pro-red: #D32F2F; --pro-grey: #666666; }
+        th { background: var(--pro-grey); color: white; font-size: 10px; padding: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .priority-High { border-left: 5px solid var(--pro-red); background-color: #fff5f5; }
+        .priority-Normal { border-left: 5px solid #EAB308; }
+        .priority-Low { border-left: 5px solid #3B82F6; }
+        input:focus { border-color: var(--pro-red) !important; outline: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 font-sans text-slate-800">
+
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white p-6 rounded shadow-sm flex flex-wrap justify-between items-center border-t-4 border-[#D32F2F] mb-6">
+            <div class="mb-4 md:mb-0">
+                <h1 class="text-2xl font-black italic tracking-tighter">PROHORIZON <span class="text-[#D32F2F]">TASK MANAGEMENT</span></h1>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Office Operations & Workflow</p>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+                <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Search Name/Task..." class="border p-2 rounded text-xs w-48 border-gray-200">
+                <button onclick="downloadTemplate()" class="bg-gray-500 text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter hover:bg-gray-600">1. Template</button>
+                <label class="bg-blue-600 text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter cursor-pointer hover:bg-blue-700">
+                    2. Import Excel
+                    <input type="file" id="importFile" class="hidden" accept=".xlsx, .xls" onchange="handleImport(this)">
+                </label>
+                <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter hover:bg-slate-800">+ Manual Task</button>
+                <button onclick="exportReport()" class="bg-[#D32F2F] text-white px-3 py-2 rounded text-[10px] font-black uppercase tracking-tighter">Export Excel</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+            <div class="bg-white p-4 rounded shadow-sm border-b-4 border-red-500">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">High Priority</p>
+                <p id="countHigh" class="text-2xl font-black text-red-600">0</p>
+            </div>
+            <div class="bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">Active / Normal</p>
+                <p id="countNormal" class="text-2xl font-black text-yellow-600">0</p>
+            </div>
+            <div class="bg-white p-4 rounded shadow-sm border-b-4 border-blue-500">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">Total Workforce Tasks</p>
+                <p id="countTotal" class="text-2xl font-black text-blue-600">0</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded shadow-lg overflow-hidden border border-gray-200">
+            <div class="overflow-x-auto max-h-[600px]">
+                <table class="w-full text-left border-collapse" id="taskTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Subject</th>
+                            <th>Assignee</th>
+                            <th>Assigned By</th>
+                            <th>Priority</th>
+                            <th>Age / Deadline</th>
+                            <th class="w-1/4">Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded shadow-2xl w-96 border-t-8 border-[#D32F2F]">
+            <h2 class="font-black text-[#D32F2F] mb-6 uppercase tracking-widest border-b pb-2">Assign Task</h2>
+            <div class="space-y-4">
+                <input type="text" id="subject" placeholder="Task Subject" class="w-full border p-2 rounded text-sm">
+                <input type="text" id="assignee" placeholder="Assignee Name" class="w-full border p-2 rounded text-sm">
+                <input type="text" id="assignedBy" placeholder="Your Name" class="w-full border p-2 rounded text-sm">
+                <div class="flex gap-2">
+                    <select id="priority" class="w-1/2 border p-2 rounded text-sm">
+                        <option>Low</option>
+                        <option selected>Normal</option>
+                        <option>High</option>
+                    </select>
+                    <input type="date" id="deadline" class="w-1/2 border p-2 rounded text-sm">
+                </div>
+                <button onclick="saveTask()" class="w-full bg-[#D32F2F] text-white py-3 rounded font-black text-sm uppercase mt-4 shadow-lg">Submit Assignment</button>
+                <button onclick="hideModal()" class="w-full text-gray-400 text-[10px] font-bold uppercase mt-2">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const API = '/api/tasks';
+
+    function downloadTemplate() {
+        const data = [{ Subject: "Sample Task", Assignee: "Employee Name", Assigned_By: "Manager Name", Priority: "High", Deadline: "2026-12-31", Remark: "" }];
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+        XLSX.writeFile(wb, "Prohorizon_Task_Template.xlsx");
+    }
+
+    async function handleImport(input) {
+        if (!input.files[0]) return;
+        const formData = new FormData();
+        formData.append('file', input.files[0]);
+        const res = await fetch(API + '/import', { method: 'POST', body: formData });
+        const result = await res.json();
+        alert(result.message || result.error);
+        loadTasks();
+        input.value = '';
+    }
+
+    async function loadTasks() {
+        try {
+            const res = await fetch(API);
+            const data = await res.json();
+            document.getElementById('countHigh').innerText = data.filter(t => t.priority === 'High').length;
+            document.getElementById('countNormal').innerText = data.filter(t => t.priority === 'Normal').length;
+            document.getElementById('countTotal').innerText = data.length;
+
+            const tbody = document.getElementById('taskBody');
+            tbody.innerHTML = data.map(t => `
+                <tr class="priority-${t.priority} border-b transition hover:bg-blue-50">
+                    <td class="p-4 font-black text-gray-300">#${t.id}</td>
+                    <td class="p-4 font-bold text-slate-700">${t.subject}</td>
+                    <td class="p-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-black text-[10px] uppercase">${t.assignee}</span></td>
+                    <td class="p-4 font-bold text-gray-400 text-[11px] uppercase">${t.assigned_by}</td>
+                    <td class="p-4"><span class="text-[10px] font-black uppercase ${t.priority === 'High' ? 'text-red-600' : 'text-gray-500'}">${t.priority}</span></td>
+                    <td class="p-4 text-[10px] font-bold text-slate-500 uppercase">${t.age} | Due: ${t.deadline}</td>
+                    <td class="p-4"><input type="text" value="${t.remark}" onblur="updateRemark(${t.id}, this.value)" class="border-b border-gray-200 bg-transparent p-1 text-xs w-full italic focus:border-[#D32F2F]" placeholder="Add Remark..."></td>
+                </tr>
+            `).join('');
+        } catch (e) { console.error("Load failed", e); }
+    }
+
+    async function saveTask() {
+        // Get values
+        const subjectVal = document.getElementById('subject').value;
+        const assigneeVal = document.getElementById('assignee').value;
+        const assignedByVal = document.getElementById('assignedBy').value;
+        const priorityVal = document.getElementById('priority').value;
+        const deadlineVal = document.getElementById('deadline').value;
+
+        // Basic validation
+        if(!subjectVal || !assigneeVal) {
+            alert("Please fill Subject and Assignee!");
+            return;
+        }
+
+        const payload = {
+            subject: subjectVal,
+            assignee: assigneeVal,
+            assigned_by: assignedByVal,
+            priority: priorityVal,
+            deadline: deadlineVal
+        };
+
+        console.log("Sending Payload:", payload);
+
+        try {
+            const res = await fetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                console.log("Save successful");
+                hideModal();
+                // Clear inputs for next time
+                document.getElementById('subject').value = '';
+                document.getElementById('assignee').value = '';
+                // Refresh table
+                loadTasks();
+            } else {
+                alert("Server error while saving.");
+            }
+        } catch (err) {
+            console.error("Save failed", err);
+            alert("Could not connect to server.");
+        }
+    }
+
+    async function updateRemark(id, val) {
+        await fetch(API + '/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, remark: val}) });
+    }
+
+    function filterTable() {
+        const val = document.getElementById('filterInput').value.toLowerCase();
+        document.querySelectorAll("#taskBody tr").forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none";
+        });
+    }
+
+    function exportReport() {
+        const wb = XLSX.utils.table_to_book(document.getElementById('taskTable'));
+        XLSX.writeFile(wb, "Prohorizon_Task_Report.xlsx");
+    }
+
+    function showModal() { document.getElementById('modal').classList.remove('hidden'); }
+    function hideModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    // Start
+    loadTasks();
+    setInterval(loadTasks, 30000);
+</script>
+</body>
+</html>
