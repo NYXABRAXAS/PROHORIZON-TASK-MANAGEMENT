@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Prohorizon Elite Task Management</title>
+    <title>Prohorizon Task Management Elite</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         .filter-btn:hover { transform: translateY(-2px); transition: 0.2s; }
-        .active-filter { ring: 3px solid #D32F2F; }
+        .status-Closed { opacity: 0.5; background: #f0fdf4; }
     </style>
 </head>
 <body class="bg-slate-50 p-4 font-sans text-slate-800">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white p-6 rounded shadow-sm border-t-4 border-[#D32F2F] mb-4">
+        <div class="bg-white p-6 rounded shadow-sm border-t-4 border-red-600 mb-4">
             <div class="flex flex-wrap justify-between items-center gap-4">
                 <div>
                     <h1 class="text-2xl font-black italic text-slate-700">PROHORIZON <span class="text-red-600 uppercase">Task Management</span></h1>
@@ -21,65 +21,53 @@
                 </div>
 
                 <div class="flex gap-2 items-center">
-                    <input type="text" id="globalSearch" onkeyup="applyAllFilters()" placeholder="Search Name/Task..." class="border p-2 rounded text-xs w-48 outline-none focus:ring-1 ring-red-500">
+                    <input type="text" id="globalSearch" onkeyup="applyAllFilters()" placeholder="Search..." class="border p-2 rounded text-xs w-48 outline-none focus:ring-1 ring-red-500">
                     <button onclick="downloadTemplate()" class="bg-slate-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">1. Template</button>
                     <label class="bg-blue-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase cursor-pointer">
                         2. Import Excel <input type="file" id="importExcel" class="hidden" onchange="handleImport(this)">
                     </label>
                     <button onclick="showModal()" class="bg-black text-white px-3 py-2 rounded text-[10px] font-bold uppercase">+ Manual Task</button>
                     <button onclick="exportExcel()" class="bg-red-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase">Export Excel</button>
-                    <button onclick="loadTasks()" class="p-2 bg-slate-100 rounded-full hover:bg-slate-200" title="Manual Sync">
+                    <button onclick="loadTasks()" class="p-2 bg-slate-100 rounded-full hover:bg-slate-200">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
-            <div class="md:col-span-4 grid grid-cols-3 gap-2">
-                <div onclick="setPriorityFilter('High')" class="bg-white p-4 rounded shadow-sm border-b-4 border-red-600 cursor-pointer filter-btn text-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase">High</p>
-                    <p id="countHigh" class="text-2xl font-black text-red-600">0</p>
-                </div>
-                <div onclick="setPriorityFilter('Normal')" class="bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500 cursor-pointer filter-btn text-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase">Normal</p>
-                    <p id="countNormal" class="text-2xl font-black text-yellow-500">0</p>
-                </div>
-                <div onclick="setPriorityFilter('Low')" class="bg-white p-4 rounded shadow-sm border-b-4 border-blue-400 cursor-pointer filter-btn text-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase">Low</p>
-                    <p id="countLow" class="text-2xl font-black text-blue-400">0</p>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 text-center">
+            <div onclick="setPriorityFilter('High')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-red-600 cursor-pointer filter-btn">
+                <p class="text-[10px] font-black text-gray-400 uppercase">High</p>
+                <p id="countHigh" class="text-2xl font-black text-red-600">0</p>
             </div>
-
+            <div onclick="setPriorityFilter('Normal')" class="md:col-span-2 bg-white p-4 rounded shadow-sm border-b-4 border-yellow-500 cursor-pointer filter-btn">
+                <p class="text-[10px] font-black text-gray-400 uppercase">Normal</p>
+                <p id="countNormal" class="text-2xl font-black text-yellow-500">0</p>
+            </div>
             <div class="md:col-span-4 bg-white p-4 rounded shadow-sm border-b-4 border-slate-700">
-                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Calendar Range Filter</p>
-                <div class="flex gap-2">
-                    <input type="date" id="dateFrom" onchange="applyAllFilters()" class="text-[10px] border p-2 rounded w-full">
-                    <span class="pt-2 text-gray-300">to</span>
-                    <input type="date" id="dateTo" onchange="applyAllFilters()" class="text-[10px] border p-2 rounded w-full">
-                </div>
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Calendar Range</p>
+                <div class="flex gap-2"><input type="date" id="dateFrom" onchange="applyAllFilters()" class="text-[10px] border p-1 rounded w-full"><input type="date" id="dateTo" onchange="applyAllFilters()" class="text-[10px] border p-1 rounded w-full"></div>
             </div>
-
             <div class="md:col-span-4 bg-white p-4 rounded shadow-sm border-b-4 border-green-500">
-                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Filter by Status</p>
-                <div id="statusPills" class="flex flex-wrap gap-2">
-                    <button onclick="setStatusFilter('')" class="text-[9px] bg-slate-100 px-2 py-1 rounded font-bold uppercase">All Status</button>
-                    </div>
+                <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Status Filter</p>
+                <div id="statusPills" class="flex flex-wrap gap-2 justify-center">
+                    <button onclick="setStatusFilter('')" class="text-[9px] bg-slate-100 px-2 py-1 rounded font-bold uppercase">All</button>
+                </div>
             </div>
         </div>
 
         <div class="bg-white rounded shadow-sm overflow-hidden">
             <table class="w-full text-left" id="mainTable">
-                <thead class="bg-[#333] text-white text-[10px] uppercase">
+                <thead class="bg-slate-800 text-white text-[10px] uppercase">
                     <tr>
-                        <th class="p-4 w-12 text-center">ID</th>
-                        <th>Subject</th>
+                        <th class="p-4">ID</th>
+                        <th>Subject (Click to Edit)</th>
                         <th>Assignee</th>
-                        <th>Admin</th>
                         <th>Priority</th>
                         <th>Status</th>
+                        <th>Proof (POC)</th>
                         <th>Remark</th>
-                        <th class="pr-4">Created At</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="taskBody" class="text-xs font-bold"></tbody>
@@ -88,127 +76,112 @@
     </div>
 
     <div id="modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg w-[500px] border-t-8 border-red-600">
-            <h2 class="text-xl font-black mb-6 uppercase text-red-600 italic">Assign New Task</h2>
+        <div class="bg-white p-8 rounded-lg w-[450px] border-t-8 border-red-600">
+            <h2 class="text-xl font-black mb-6 uppercase text-red-600">New Assignment</h2>
             <div class="space-y-3">
-                <input type="text" id="m_subject" placeholder="Task Subject" class="w-full border p-3 rounded">
-                <input type="text" id="m_assignee" placeholder="Assignee Name" class="w-full border p-3 rounded">
-                <input type="text" id="m_assignedBy" placeholder="Assigned By (Admin)" class="w-full border p-3 rounded">
+                <input type="text" id="m_subject" placeholder="Subject" class="w-full border p-3 rounded text-sm">
+                <input type="text" id="m_assignee" placeholder="Assignee Name" class="w-full border p-3 rounded text-sm">
+                <input type="text" id="m_assignedBy" placeholder="Admin Name" class="w-full border p-3 rounded text-sm">
                 <div class="flex gap-2">
-                    <select id="m_priority" class="w-1/2 border p-3 rounded">
-                        <option>Normal</option>
-                        <option>High</option>
-                        <option>Low</option>
-                    </select>
-                    <input type="text" id="m_status" placeholder="Status (Pending/Resolved)" class="w-1/2 border p-3 rounded">
+                    <select id="m_priority" class="w-1/2 border p-3 rounded text-sm"><option>Normal</option><option>High</option><option>Low</option></select>
+                    <input type="text" id="m_status" placeholder="Status" class="w-1/2 border p-3 rounded text-sm">
                 </div>
-                <textarea id="m_remark" placeholder="Initial Remark" class="w-full border p-3 rounded h-20"></textarea>
-                <button onclick="submitTask()" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase tracking-widest shadow-lg">Submit Assignment</button>
-                <button onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 uppercase text-[10px]">Close Window</button>
+                <textarea id="m_remark" placeholder="Initial Remark" class="w-full border p-3 rounded h-20 text-sm"></textarea>
+                <button onclick="submitTask()" class="w-full bg-red-600 text-white py-4 rounded font-black uppercase">Save Task</button>
+                <button onclick="hideModal()" class="w-full text-gray-400 font-bold mt-2 text-[10px]">CANCEL</button>
             </div>
         </div>
     </div>
 
 <script>
-    let activePriority = '';
-    let activeStatus = '';
+    let activePriority = ''; let activeStatus = '';
 
     async function loadTasks() {
         const res = await fetch('/api/tasks');
         const tasks = await res.json();
         
-        // Update Counters
         document.getElementById('countHigh').innerText = tasks.filter(t => t.priority === 'High').length;
         document.getElementById('countNormal').innerText = tasks.filter(t => t.priority === 'Normal').length;
-        document.getElementById('countLow').innerText = tasks.filter(t => t.priority === 'Low').length;
 
-        // Build Status Pills dynamically based on user data
         const uniqueStatuses = [...new Set(tasks.map(t => t.status))].filter(s => s);
-        const pillBox = document.getElementById('statusPills');
-        const currentPills = pillBox.innerHTML.split('</button>')[0] + '</button>'; 
-        pillBox.innerHTML = currentPills + uniqueStatuses.map(s => 
-            `<button onclick="setStatusFilter('${s}')" class="text-[9px] ${activeStatus === s ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700'} px-2 py-1 rounded font-bold uppercase border border-green-200">${s}</button>`
-        ).join('');
+        document.getElementById('statusPills').innerHTML = `<button onclick="setStatusFilter('')" class="text-[9px] bg-slate-100 px-2 py-1 rounded font-bold uppercase">All</button>` + 
+            uniqueStatuses.map(s => `<button onclick="setStatusFilter('${s}')" class="text-[9px] bg-green-50 text-green-700 px-2 py-1 rounded font-bold uppercase border border-green-200">${s}</button>`).join('');
 
-        const tbody = document.getElementById('taskBody');
-        tbody.innerHTML = tasks.map(t => `
-            <tr class="border-b hover:bg-slate-50 transition" data-date="${t.created_at.split(' ')[0]}" data-priority="${t.priority}" data-status="${t.status}">
-                <td class="p-4 text-center text-gray-300">#${t.id}</td>
-                <td class="p-4 text-slate-700">${t.subject}</td>
+        document.getElementById('taskBody').innerHTML = tasks.map(t => `
+            <tr class="border-b hover:bg-slate-50 transition status-${t.status}" data-date="${t.created_at.split(' ')[0]}" data-priority="${t.priority}" data-status="${t.status}">
+                <td class="p-4 text-gray-300">#${t.id}</td>
+                <td class="p-4"><input type="text" value="${t.subject}" onblur="updateTask(${t.id}, 'subject', this.value)" class="bg-transparent border-b border-transparent focus:border-red-500 outline-none w-full"></td>
                 <td class="p-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] uppercase">${t.assignee}</span></td>
-                <td class="p-4 text-gray-400 uppercase text-[9px]">${t.assigned_by}</td>
                 <td class="p-4">
-                    <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${t.priority === 'High' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}">${t.priority}</span>
+                    <select onchange="updateTask(${t.id}, 'priority', this.value)" class="bg-transparent font-black ${t.priority === 'High' ? 'text-red-600' : 'text-slate-500'}">
+                        <option ${t.priority === 'Normal' ? 'selected' : ''}>Normal</option>
+                        <option ${t.priority === 'High' ? 'selected' : ''}>High</option>
+                        <option ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
+                    </select>
                 </td>
-                <td class="p-4 font-black text-slate-600 uppercase text-[10px]">${t.status}</td>
-                <td class="p-4 italic text-gray-500 font-normal border-l border-slate-50">${t.remark || ''}</td>
-                <td class="p-4 text-[9px] text-gray-400">${t.created_at}</td>
+                <td class="p-4">
+                    <input type="text" value="${t.status}" onblur="updateTask(${t.id}, 'status', this.value)" class="bg-transparent font-black uppercase text-[10px] border-b border-dashed w-24">
+                </td>
+                <td class="p-4">
+                    ${t.file_proof ? `<a href="/uploads/${t.file_proof}" target="_blank" class="text-green-600 underline">View POC</a>` : `<input type="file" onchange="uploadPOC(${t.id}, this)" class="text-[9px] w-28">`}
+                </td>
+                <td class="p-4"><input type="text" value="${t.remark || ''}" onblur="updateTask(${t.id}, 'remark', this.value)" class="bg-transparent font-normal italic w-full" placeholder="..."></td>
+                <td class="p-4">
+                    <button onclick="updateTask(${t.id}, 'status', 'Closed')" class="bg-green-600 text-white px-2 py-1 rounded text-[9px] uppercase font-black">Close Task</button>
+                </td>
             </tr>
         `).join('');
         applyAllFilters();
     }
 
+    async function updateTask(id, field, value) {
+        await fetch('/api/tasks/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, [field]: value}) });
+        if(field === 'status') loadTasks();
+    }
+
+    async function uploadPOC(id, input) {
+        const formData = new FormData(); formData.append('file', input.files[0]);
+        await fetch(`/api/tasks/upload/${id}`, { method: 'POST', body: formData });
+        loadTasks();
+    }
+
+    function exportExcel() {
+        const table = document.getElementById("mainTable");
+        const wb = XLSX.utils.table_to_book(table);
+        XLSX.writeFile(wb, "Prohorizon_Tasks_Export.xlsx");
+    }
+
+    function downloadTemplate() {
+        const data = [["Subject", "Assignee", "Admin", "Priority", "Status", "Remark", "Deadline"]];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+        XLSX.writeFile(wb, "Prohorizon_Template.xlsx");
+    }
+
     function applyAllFilters() {
-        const query = document.getElementById('globalSearch').value.toLowerCase();
-        const fromDate = document.getElementById('dateFrom').value;
-        const toDate = document.getElementById('dateTo').value;
-        const rows = document.querySelectorAll('#taskBody tr');
-
-        rows.forEach(row => {
-            const rowText = row.innerText.toLowerCase();
+        const q = document.getElementById('globalSearch').value.toLowerCase();
+        const f = document.getElementById('dateFrom').value;
+        const t = document.getElementById('dateTo').value;
+        document.querySelectorAll('#taskBody tr').forEach(row => {
             const rowDate = row.getAttribute('data-date');
-            const rowPriority = row.getAttribute('data-priority');
-            const rowStatus = row.getAttribute('data-status');
-            
-            let show = true;
-
-            // Priority Logic
-            if (activePriority && rowPriority !== activePriority) show = false;
-            // Status Logic
-            if (show && activeStatus && rowStatus !== activeStatus) show = false;
-            // Keyword Logic
-            if (show && query && !rowText.includes(query)) show = false;
-            // Range Logic
-            if (show && fromDate && rowDate < fromDate) show = false;
-            if (show && toDate && rowDate > toDate) show = false;
-
+            const show = (!activePriority || row.getAttribute('data-priority') === activePriority) &&
+                         (!activeStatus || row.getAttribute('data-status') === activeStatus) &&
+                         (!q || row.innerText.toLowerCase().includes(q)) &&
+                         (!f || rowDate >= f) && (!t || rowDate <= t);
             row.style.display = show ? "" : "none";
         });
     }
 
-    function setPriorityFilter(p) {
-        activePriority = (activePriority === p) ? '' : p;
-        applyAllFilters();
-    }
-
-    function setStatusFilter(s) {
-        activeStatus = s;
-        applyAllFilters();
-    }
-
-    // Modal and Task Logic
-    async function submitTask() {
-        const data = {
-            subject: document.getElementById('m_subject').value,
-            assignee: document.getElementById('m_assignee').value,
-            assigned_by: document.getElementById('m_assignedBy').value,
-            priority: document.getElementById('m_priority').value,
-            status: document.getElementById('m_status').value || 'Pending',
-            remark: document.getElementById('m_remark').value
-        };
-        await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-        hideModal();
-        loadTasks();
-    }
-
-    function exportExcel() { XLSX.utils.writeFile(XLSX.utils.table_to_book(document.getElementById('mainTable')), "Prohorizon_Report.xlsx"); }
-    function downloadTemplate() { 
-        const ws = XLSX.utils.aoa_to_sheet([["Subject", "Assignee", "Assigned By", "Priority", "Status", "Remark"]]);
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tasks");
-        XLSX.utils.writeFile(wb, "Prohorizon_Template.xlsx");
-    }
+    function setPriorityFilter(p) { activePriority = (activePriority === p) ? '' : p; applyAllFilters(); }
+    function setStatusFilter(s) { activeStatus = s; applyAllFilters(); }
     function showModal() { document.getElementById('modal').classList.remove('hidden'); }
     function hideModal() { document.getElementById('modal').classList.add('hidden'); }
+    async function submitTask() {
+        const data = { subject: document.getElementById('m_subject').value, assignee: document.getElementById('m_assignee').value, assigned_by: document.getElementById('m_assignedBy').value, priority: document.getElementById('m_priority').value, status: document.getElementById('m_status').value || 'Pending', remark: document.getElementById('m_remark').value };
+        await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        hideModal(); loadTasks();
+    }
     loadTasks();
 </script>
 </body>
