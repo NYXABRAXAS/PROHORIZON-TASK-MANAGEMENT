@@ -31,6 +31,7 @@
             </div>
         </div>
 
+        <!-- Stats + Filters -->
         <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
             <div onclick="filterByPriority('High')" class="bg-white p-5 rounded shadow border-b-4 border-red-600 text-center cursor-pointer hover:bg-red-50">
                 <p class="text-[9px] text-gray-400 uppercase font-black">HIGH PRIORITY</p>
@@ -135,11 +136,11 @@
     async function loadTasks() {
         try {
             const res = await fetch('/api/tasks');
-            if (!res.ok) throw new Error();
+            if (!res.ok) throw new Error('Unauthorized or server error');
             allTasks = await res.json();
             filterData();
-        } catch {
-            alert("Could not load tasks");
+        } catch (e) {
+            alert("Could not load tasks. Make sure server is running.");
         }
     }
 
@@ -165,10 +166,10 @@
             </tr>
         `).join('');
 
-        document.getElementById('countHigh').innerText   = allTasks.filter(t => t.priority === 'High').length;
+        document.getElementById('countHigh').innerText = allTasks.filter(t => t.priority === 'High').length;
         document.getElementById('countNormal').innerText = allTasks.filter(t => t.priority === 'Normal').length;
-        document.getElementById('countLow').innerText    = allTasks.filter(t => t.priority === 'Low').length;
-        document.getElementById('totalTasks').innerText  = tasks.length;
+        document.getElementById('countLow').innerText = allTasks.filter(t => t.priority === 'Low').length;
+        document.getElementById('totalTasks').innerText = tasks.length;
     }
 
     function filterByPriority(p) {
@@ -177,12 +178,12 @@
     }
 
     function filterData() {
-        const start  = document.getElementById('dateStart').value;
-        const end    = document.getElementById('dateEnd').value;
+        const start = document.getElementById('dateStart').value;
+        const end = document.getElementById('dateEnd').value;
         const status = document.getElementById('statusFilter').value;
 
         const filtered = allTasks.filter(t => {
-            const matchStatus   = status === 'ALL' || t.status === status;
+            const matchStatus = status === 'ALL' || t.status === status;
             const matchPriority = currentFilterPriority === 'ALL' || t.priority === currentFilterPriority;
             let matchDate = true;
             if (start && end && t.created_at) {
@@ -191,36 +192,28 @@
             }
             return matchStatus && matchPriority && matchDate;
         });
-
         renderTable(filtered);
     }
 
     async function deleteTask(id) {
         if (!confirm("Delete this task?")) return;
-        try {
-            const res = await fetch(`/api/tasks/${id}`, {method: 'DELETE'});
-            if (res.ok) loadTasks();
-            else alert("Delete failed");
-        } catch {
-            alert("Error deleting task");
-        }
+        const res = await fetch(`/api/tasks/${id}`, {method: 'DELETE'});
+        if (res.ok) loadTasks();
+        else alert("Delete failed");
     }
 
     function editTask(id) {
         const t = allTasks.find(x => x.id === id);
         if (!t) return;
-
         editingTaskId = id;
-
         const form = document.getElementById('taskForm');
-        form.subject.value   = t.subject   || '';
-        form.assignee.value  = t.assignee  || '';
-        form.admin.value     = t.admin     || '';
-        form.priority.value  = t.priority  || 'Normal';
-        form.status.value    = t.status    || 'Pending';
-        form.deadline.value  = t.deadline  || '';
-        form.remark.value    = t.remark    || '';
-
+        form.subject.value = t.subject || '';
+        form.assignee.value = t.assignee || '';
+        form.admin.value = t.admin || '';
+        form.priority.value = t.priority || 'Normal';
+        form.status.value = t.status || 'Pending';
+        form.deadline.value = t.deadline || '';
+        form.remark.value = t.remark || '';
         showModal();
     }
 
@@ -228,34 +221,39 @@
         e.preventDefault();
         const form = e.target;
 
+        let success = false;
         if (editingTaskId !== null) {
-            // Update (PUT) - JSON
             const jsonData = {
-                subject:   form.subject.value.trim(),
-                assignee:  form.assignee.value.trim(),
-                admin:     form.admin.value.trim(),
-                priority:  form.priority.value,
-                status:    form.status.value,
-                deadline:  form.deadline.value,
-                remark:    form.remark.value.trim()
+                subject: form.subject.value.trim(),
+                assignee: form.assignee.value.trim(),
+                admin: form.admin.value.trim(),
+                priority: form.priority.value,
+                status: form.status.value,
+                deadline: form.deadline.value,
+                remark: form.remark.value.trim()
             };
-            await fetch(`/api/tasks/${editingTaskId}`, {
+            const res = await fetch(`/api/tasks/${editingTaskId}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(jsonData)
             });
+            success = res.ok;
         } else {
-            // Create (POST) - FormData (supports file)
-            await fetch('/api/tasks', {
+            const res = await fetch('/api/tasks', {
                 method: 'POST',
                 body: new FormData(form)
             });
+            success = res.ok;
         }
 
-        hideModal();
-        editingTaskId = null;
-        form.reset();
-        loadTasks();
+        if (success) {
+            hideModal();
+            editingTaskId = null;
+            form.reset();
+            loadTasks();
+        } else {
+            alert("Save failed. Check server logs.");
+        }
     };
 
     async function importExcel(input) {
@@ -283,22 +281,15 @@
 
     function exportTemplate() {
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([
-            ["Subject", "Assignee", "Admin", "Priority", "Deadline"]
-        ]);
+        const ws = XLSX.utils.aoa_to_sheet([["Subject", "Assignee", "Admin", "Priority", "Deadline"]]);
         XLSX.utils.book_append_sheet(wb, ws, "Template");
         XLSX.writeFile(wb, "Prohorizon_Task_Template.xlsx");
     }
 
     function exportExcel() {
         const table = document.getElementById("mainTable").cloneNode(true);
-        // Remove action column before export
         const rows = table.querySelectorAll('tr');
-        rows.forEach(row => {
-            if (row.cells.length > 9) {
-                row.deleteCell(-1); // remove Actions
-            }
-        });
+        rows.forEach(row => { if (row.cells.length > 9) row.deleteCell(-1); });
         const wb = XLSX.utils.table_to_book(table, {sheet: "Tasks"});
         XLSX.writeFile(wb, `Prohorizon_Tasks_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
@@ -317,21 +308,9 @@
     function sendWA(id) {
         const t = allTasks.find(x => x.id === id);
         if (!t) return;
-
-        const msg = `*PROHORIZON TASK #${t.id}*%0A` +
-                    `*Subject:* ${encodeURIComponent(t.subject || 'N/A')}%0A` +
-                    `*Assignee:* ${t.assignee || '-'}%0A` +
-                    `*Admin:* ${t.admin || '-'}%0A` +
-                    `*Priority:* ${t.priority || 'Normal'}%0A` +
-                    `*Status:* ${t.status}%0A` +
-                    `*Deadline:* ${t.deadline || 'No deadline'}%0A` +
-                    `*Remark:* ${encodeURIComponent(t.remark || '-')}%0A` +
-                    `*Created:* ${t.created_at || 'N/A'}`;
-
-        const phone = prompt("Enter WhatsApp number (with country code, e.g. 919876543210):", "91");
-        if (phone) {
-            window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
-        }
+        const msg = `*PROHORIZON TASK #${t.id}*%0A*Subject:* ${encodeURIComponent(t.subject || 'N/A')}%0A*Assignee:* ${t.assignee || '-'}%0A*Admin:* ${t.admin || '-'}%0A*Priority:* ${t.priority || 'Normal'}%0A*Status:* ${t.status}%0A*Deadline:* ${t.deadline || 'No deadline'}%0A*Remark:* ${encodeURIComponent(t.remark || '-')}%0A*Created:* ${t.created_at || 'N/A'}`;
+        const phone = prompt("Enter WhatsApp number (with country code):", "91");
+        if (phone) window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     }
 </script>
 </body>
