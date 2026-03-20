@@ -39,7 +39,7 @@ def login():
     if data.get('username') == 'admin' and data.get('password') == 'pro123':
         session['logged_in'] = True
         return jsonify({"success": True})
-    return jsonify({"success": False, "error": "Invalid credentials"}), 401
+    return jsonify({"success": False}), 401
 
 @app.route('/api/logout')
 def logout():
@@ -53,7 +53,7 @@ def manage_tasks():
 
     if request.method == 'POST':
         if request.is_json:
-            # Bulk from Excel
+            # Bulk import from Excel
             data_list = request.json if isinstance(request.json, list) else [request.json]
             for item in data_list:
                 task = Task(
@@ -61,11 +61,11 @@ def manage_tasks():
                     assignee=item.get('Assignee') or item.get('assignee', ''),
                     admin=item.get('Admin') or item.get('admin', ''),
                     priority=item.get('Priority') or item.get('priority', 'Normal'),
-                    deadline=str(item.get('Deadline') or item.get('deadline') or ''),
+                    deadline=str(item.get('Deadline') or item.get('deadline') or '')
                 )
                 db.session.add(task)
         else:
-            # Manual form
+            # Manual task (with file)
             file = request.files.get('poc_file')
             filename = None
             if file and file.filename:
@@ -84,7 +84,7 @@ def manage_tasks():
             )
             db.session.add(task)
 
-        db.session.commit()
+        db.session.commit()          # ← FORCE COMMIT
         return jsonify({"success": True})
 
     # GET all tasks
@@ -102,7 +102,7 @@ def manage_tasks():
         "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
     } for t in tasks])
 
-@app.route('/api/tasks/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+@app.route('/api/tasks/<int:id>', methods=['PUT', 'DELETE'])
 def task_by_id(id):
     if not session.get('logged_in'):
         return jsonify({"error": "Unauthorized"}), 401
@@ -121,21 +121,15 @@ def task_by_id(id):
 
     elif request.method == 'PUT':
         data = request.json
-        task.subject   = data.get('subject',   task.subject)
-        task.assignee  = data.get('assignee',  task.assignee)
-        task.admin     = data.get('admin',     task.admin)
-        task.priority  = data.get('priority',  task.priority)
-        task.status    = data.get('status',    task.status)
-        task.remark    = data.get('remark',    task.remark)
-        task.deadline  = data.get('deadline',  task.deadline)
+        task.subject = data.get('subject', task.subject)
+        task.assignee = data.get('assignee', task.assignee)
+        task.admin = data.get('admin', task.admin)
+        task.priority = data.get('priority', task.priority)
+        task.status = data.get('status', task.status)
+        task.remark = data.get('remark', task.remark)
+        task.deadline = data.get('deadline', task.deadline)
         db.session.commit()
         return jsonify({"success": True})
-
-    return jsonify({
-        "id": task.id, "subject": task.subject, "assignee": task.assignee,
-        "admin": task.admin, "priority": task.priority, "status": task.status,
-        "remark": task.remark, "deadline": task.deadline, "poc": task.poc_filename
-    })
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -147,4 +141,4 @@ def index():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
